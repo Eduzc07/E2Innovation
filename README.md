@@ -1,7 +1,7 @@
-# E2Innovation
+# E2 Innovation
 
 Para descargar, ejectuar desde el terminal:
-git clone https://github.com/Eduzc07/Maxim.git
+git clone https://github.com/Eduzc07/E2Innovation.git
 
 
 ## Create a branch
