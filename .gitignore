@@ -14,8 +14,8 @@ gen/
 out/
 
 # Gradle files
-.gradle/
-build/
+E2IApp/.gradle/
+E2IApp/build/
 
 # Local configuration file (sdk path, etc)
 local.properties
