@@ -42,14 +42,13 @@
             android:text="Hello World!"/>
 
         <Button
+            android:id="@+id/main_camera_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity = "center_horizontal|center_vertical"
             android:text="Capture" />
 
     </LinearLayout>
-
-
 
     <!--Footer-->
     <TextView

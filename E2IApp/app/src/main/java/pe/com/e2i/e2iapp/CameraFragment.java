@@ -4,18 +4,19 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
 //import android.app.Fragment;
-import android.support.v4.app.Fragment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.TextView;
-
-public class MainFragment extends Fragment {
-
-    private final String LOG_TAG = MainActivity.class.getSimpleName();
-
+import android.support.v4.app.Fragment;
+/**
+ * A simple {@link Fragment} subclass.
+ * Activities that contain this fragment must implement the
+ * {@link CameraFragment.OnFragmentInteractionListener} interface
+ * to handle interaction events.
+ * Use the {@link CameraFragment#newInstance} factory method to
+ * create an instance of this fragment.
+ */
+public class CameraFragment extends Fragment {
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
@@ -25,27 +26,9 @@ public class MainFragment extends Fragment {
     private String mParam1;
     private String mParam2;
 
-    private Button mCameraButton;
-
 //    private OnFragmentInteractionListener mListener;
 
-    static {
-        System.loadLibrary( "native-lib" );
-    }
-
-    /**
-     * A callback interface that all activities containing this fragment must
-     * implement. This mechanism allows activities to be notified of item
-     * selections.
-     */
-    public interface Callback {
-        /**
-         * DetailFragmentCallback for when an item has been selected.
-         */
-        public void onViewCamera();
-    }
-
-    public MainFragment() {
+    public CameraFragment() {
         // Required empty public constructor
     }
 
@@ -55,18 +38,18 @@ public class MainFragment extends Fragment {
 //     *
 //     * @param param1 Parameter 1.
 //     * @param param2 Parameter 2.
-//     * @return A new instance of fragment MainFragment.
+//     * @return A new instance of fragment CameraFragment.
 //     */
-//    // TODO: Rename and change types and number of parameters
-//    public static MainFragment newInstance(String param1, String param2) {
-//        MainFragment fragment = new MainFragment();
+    // TODO: Rename and change types and number of parameters
+//    public static CameraFragment newInstance(String param1, String param2) {
+//        CameraFragment fragment = new CameraFragment();
 //        Bundle args = new Bundle();
 //        args.putString( ARG_PARAM1, param1 );
 //        args.putString( ARG_PARAM2, param2 );
 //        fragment.setArguments( args );
 //        return fragment;
 //    }
-
+//
 //    @Override
 //    public void onCreate(Bundle savedInstanceState) {
 //        super.onCreate( savedInstanceState );
@@ -79,26 +62,13 @@ public class MainFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-
-        View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-        TextView text = (TextView) rootView.findViewById(R.id.sample_text);
-
-        text.setText( stringFromJNI() );
-
-        mCameraButton = (Button) rootView.findViewById(R.id.main_camera_button);
-        mCameraButton.setOnClickListener( new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                ((Callback) getActivity()).onViewCamera();
-            }
-        });
         // Inflate the layout for this fragment
+        View rootView = inflater.inflate(R.layout.fragment_camera, container, false);
+
         return rootView;
-
-
     }
-//
-//    // TODO: Rename method, update argument and hook method into UI event
+
+    // TODO: Rename method, update argument and hook method into UI event
 //    public void onButtonPressed(Uri uri) {
 //        if (mListener != null) {
 //            mListener.onFragmentInteraction( uri );
@@ -136,10 +106,4 @@ public class MainFragment extends Fragment {
 //        // TODO: Update argument type and name
 //        void onFragmentInteraction(Uri uri);
 //    }
-
-    /**
-     * A native method that is implemented by the 'native-lib' native library,
-     * which is packaged with this application.
-     */
-    public native String stringFromJNI();
 }
