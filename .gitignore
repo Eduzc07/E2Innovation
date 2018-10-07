@@ -34,13 +34,13 @@ captures/
 
 # IntelliJ
 *.iml
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/gradle.xml
-.idea/assetWizardSettings.xml
-.idea/dictionaries
-.idea/libraries
-.idea/caches
+E2IApp/.idea/workspace.xml
+E2IApp/.idea/tasks.xml
+E2IApp/.idea/gradle.xml
+E2IApp/.idea/assetWizardSettings.xml
+E2IApp/.idea/dictionaries
+E2IApp/.idea/libraries
+E2IApp/.idea/caches
 
 # Keystore files
 # Uncomment the following line if you do not want to check your keystore files in.
@@ -63,3 +63,5 @@ fastlane/Preview.html
 fastlane/screenshots
 fastlane/test_output
 fastlane/readme.md
+
+
