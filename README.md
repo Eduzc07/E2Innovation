@@ -58,6 +58,14 @@ git add {files}
 git commit -m "Description"
 git push origin {branch_name}
 ```
+# How copy an Apk in cellphone
+```
+adb start-server
+adb devices -> (###) device
+adb -s (###) push myApp.apk /sdcard/download
+```
+[Install pk in Cellphone](http://xmodulo.com/how-to-install-apk-file-on-android-phone-or-tablet.html)\
+
 
 ## Info
 [Create a new branch](https://github.com/Kunena/Kunena-Forum/wiki/Create-a-new-branch-with-git-and-manage-branches)\
