@@ -29,10 +29,6 @@ public class MainFragment extends Fragment {
 
 //    private OnFragmentInteractionListener mListener;
 
-    static {
-        System.loadLibrary( "native-lib" );
-    }
-
     /**
      * A callback interface that all activities containing this fragment must
      * implement. This mechanism allows activities to be notified of item
@@ -81,9 +77,6 @@ public class MainFragment extends Fragment {
                              Bundle savedInstanceState) {
 
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-        TextView text = (TextView) rootView.findViewById(R.id.sample_text);
-
-        text.setText( stringFromJNI() );
 
         mCameraButton = (Button) rootView.findViewById(R.id.main_camera_button);
         mCameraButton.setOnClickListener( new View.OnClickListener() {
@@ -94,8 +87,6 @@ public class MainFragment extends Fragment {
         });
         // Inflate the layout for this fragment
         return rootView;
-
-
     }
 //
 //    // TODO: Rename method, update argument and hook method into UI event
@@ -137,9 +128,4 @@ public class MainFragment extends Fragment {
 //        void onFragmentInteraction(Uri uri);
 //    }
 
-    /**
-     * A native method that is implemented by the 'native-lib' native library,
-     * which is packaged with this application.
-     */
-    public native String stringFromJNI();
 }

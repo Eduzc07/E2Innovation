@@ -4,19 +4,22 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
 //import android.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.support.v4.app.Fragment;
+import android.widget.TextView;
+
+import org.opencv.android.OpenCVLoader;
+
 /**
  * A simple {@link Fragment} subclass.
- * Activities that contain this fragment must implement the
- * {@link CameraFragment.OnFragmentInteractionListener} interface
- * to handle interaction events.
- * Use the {@link CameraFragment#newInstance} factory method to
- * create an instance of this fragment.
  */
 public class CameraFragment extends Fragment {
+    private static final String TAG = CameraFragment.class.getSimpleName();
+
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
@@ -26,10 +29,27 @@ public class CameraFragment extends Fragment {
     private String mParam1;
     private String mParam2;
 
+    private TextView mTextView;
+    private TextureView mTextureView;  //A TextureView can be used to display a content stream
+
 //    private OnFragmentInteractionListener mListener;
 
-    public CameraFragment() {
+    static {
+        System.loadLibrary( "native-lib" );
+    }
+
+    static {
+        if(OpenCVLoader.initDebug()) {
+            Log.d(TAG, "OpenCV successfully loaded");
+        }else{
+            Log.d(TAG, "OpenCV not loaded");
+        }
+    }
+
+
+    public CameraFragment()  {
         // Required empty public constructor
+        Log.i(TAG, "Instantiated new " + this.getClass());
     }
 
 //    /**
@@ -64,6 +84,11 @@ public class CameraFragment extends Fragment {
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
         View rootView = inflater.inflate(R.layout.fragment_camera, container, false);
+
+        mTextView = (TextView) rootView.findViewById(R.id.camera_textView);
+        mTextureView = (TextureView) rootView.findViewById(R.id.camera_texture);
+
+        mTextView.setText( stringFromJNI() );
 
         return rootView;
     }
@@ -106,4 +131,10 @@ public class CameraFragment extends Fragment {
 //        // TODO: Update argument type and name
 //        void onFragmentInteraction(Uri uri);
 //    }
+
+    /**
+     * A native method that is implemented by the 'native-lib' native library,
+     * which is packaged with this application.
+     */
+    public native String stringFromJNI();
 }
