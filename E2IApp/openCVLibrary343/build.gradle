@@ -15,4 +15,16 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
     }
+
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
+        }
+    }
+    sourceSets {
+        main {
+            jni.srcDirs = [jni.srcDirs, '/home/edu/Softwares/OpenCV-3.4.3-android-sdk/sdk/native/jni/include']
+            jniLibs.srcDirs = [jniLibs.srcDirs, '/home/edu/Softwares/OpenCV-3.4.3-android-sdk/sdk/native/3rdparty/libs', '/home/edu/Softwares/OpenCV-3.4.3-android-sdk/sdk/native/libs']
+        }
+    }
 }
