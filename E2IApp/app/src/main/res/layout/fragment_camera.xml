@@ -4,11 +4,11 @@
     <!--tools:context=".CameraFragment"-->
     <!--xmlns:tools="http://schemas.android.com/tools"-->
 
-    <TextureView
-        android:id="@+id/camera_texture"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_centerInParent="true" />
+    <!--<TextureView-->
+        <!--android:id="@+id/camera_texture"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="match_parent"-->
+        <!--android:layout_centerInParent="true" />-->
 
     <ImageView
         android:id="@+id/test_image"

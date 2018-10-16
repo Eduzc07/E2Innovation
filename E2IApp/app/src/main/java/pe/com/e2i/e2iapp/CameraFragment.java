@@ -76,7 +76,7 @@ public class CameraFragment extends Fragment {
     private String mParam2;
 
     private TextView mTextView;
-    private TextureView mTextureView;  //A TextureView can be used to display a content stream
+//    private TextureView mTextureView;  //A TextureView can be used to display a content stream
     private ImageView mImageView;
 
 //    private OnFragmentInteractionListener mListener;
@@ -141,10 +141,9 @@ public class CameraFragment extends Fragment {
                     return;
 
                 //------------------------------------------------------
-                String cs = Integer.toString(image.getHeight());
-                String rs = Integer.toString(image.getWidth());
-                Log.v(TAG,"Image - Java:"+cs+"x"+rs);
-
+//                String cs = Integer.toString(image.getHeight());
+//                String rs = Integer.toString(image.getWidth());
+//                Log.v(TAG,"Image - Java:"+cs+"x"+rs);
 
                 byte[] nv21;
                 ByteBuffer yBuffer = image.getPlanes()[0].getBuffer();
@@ -357,11 +356,12 @@ public class CameraFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_camera, container, false);
 
         mTextView = (TextView) rootView.findViewById(R.id.camera_textView);
-        mTextureView = (TextureView) rootView.findViewById(R.id.camera_texture);
+//        mTextureView = (TextureView) rootView.findViewById(R.id.camera_texture);
         mImageView = (ImageView)  rootView.findViewById(R.id.test_image);
 
-        mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);//Call mSurfaceTextureListener
+//        mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);//Call mSurfaceTextureListener
 
+        openCamera();
         mTextView.setText( stringFromJNI() );
 
         return rootView;
@@ -520,35 +520,34 @@ public class CameraFragment extends Fragment {
     };
 
     protected void startPreview() {
-
-        if(null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
+//|| !mTextureView.isAvailable()
+        if(null == mCameraDevice || null == mPreviewSize) {
             Log.e(TAG,"startPreview fail, return");
             return;
         }
 
         try {
-            SurfaceTexture texture = mTextureView.getSurfaceTexture();
-            if(null == texture) {
-                Log.e(TAG,"texture is null, return");
-                return;
-            }
-            // We configure the size of default buffer to be the size of camera preview we want.
-            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
+//            SurfaceTexture texture = mTextureView.getSurfaceTexture();
+//            if(null == texture) {
+//                Log.e(TAG,"texture is null, return");
+//                return;
+//            }
+//            // We configure the size of default buffer to be the size of camera preview we want.
+//            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
 
             // We set up a CaptureRequest.Builder with the output Surface.
             mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
 
             // This is the output Surface we need to start preview.
-            Surface surface = new Surface(texture);
-            mPreviewBuilder.addTarget(surface);
+//            Surface surface = new Surface(texture);
+//            mPreviewBuilder.addTarget(surface);
 
             Surface mImageSurface = mImageReader.getSurface();
             mPreviewBuilder.addTarget(mImageSurface);
 
             // also for preview callbacks
 
-
-            mCameraDevice.createCaptureSession(Arrays.asList(surface, mImageReader.getSurface()),
+            mCameraDevice.createCaptureSession(Arrays.asList(mImageReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
 
                         @Override
@@ -562,9 +561,17 @@ public class CameraFragment extends Fragment {
                             mPreviewSession = cameraCaptureSession;
 
                             try {
-                                // Auto focus should be continuous for camera preview.
+
+//                                mPreviewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+//        mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
+//                                mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
+//
+//                                // Auto focus should be continuous for camera preview.
                                 mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+
+                                //Update Flash
+//                                mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
 
                                 // Finally, we start displaying the camera preview.
                                 mPreviewRequest = mPreviewBuilder.build();
@@ -886,13 +893,10 @@ public class CameraFragment extends Fragment {
                                      Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(matToBit, imgMap);
 
-        if (imgMap!=null)
-        {
-            Log.d(TAG, "I'm an image frame!");
+        if (imgMap!=null) {
             mImageView.setImageBitmap(imgMap);
         }else{
             Log.d(TAG, "null frame!");
-
         }
     }
 
