@@ -25,6 +25,7 @@ import android.os.Build;
 import android.os.Bundle;
 //import android.app.Fragment;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -37,7 +38,9 @@ import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.support.v4.app.Fragment;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -78,6 +81,8 @@ public class CameraFragment extends Fragment {
     private TextView mTextView;
 //    private TextureView mTextureView;  //A TextureView can be used to display a content stream
     private ImageView mImageView;
+    private ProgressBar mProgressBar;
+    private Button mFlashButton;
 
 //    private OnFragmentInteractionListener mListener;
 
@@ -100,16 +105,32 @@ public class CameraFragment extends Fragment {
 
     private Bitmap 		mBitMap; // Bitmap element to show the image in preview.
     private Mat         jpegMat; //Mat element which receive the image from buffer.
-    private Mat 		rgbMat; // Decode jpegMat in rgbMat, also it contains the image after JNI (C++ and OpenCV).
+    private Mat 		mRGB; // Decode jpegMat in rgbMat, also it contains the image after JNI (C++ and OpenCV).
 
     private Surface mImageSurface;
 
+    private Boolean mIsProgressBarVisible = false;
     private Handler mBackgroundHandler;
+    private HandlerThread mBackgroundThread;
 
+    /*========================    4   ======================== */
     @Override
     public void onPause() {
+        Log.e(TAG, "onPause");
+        stopBackgroundThread();
         super.onPause();
+        if (null != mCameraDevice) {
+            mCameraDevice.close();
+            mCameraDevice = null;
+        }
+    }
+    /*========================  End 4 ======================== */
+
+    @Override
+    public void onStop() {
+        super.onStop();
         closeCamera();
+        Log.e(TAG, "Rotation onStop");
     }
 
     /**
@@ -120,6 +141,31 @@ public class CameraFragment extends Fragment {
      * ID of the current {@link CameraDevice}.
      */
     private String mCameraId;
+
+    /*========================    3   ======================== */
+    @Override
+    public void onResume() {
+        super.onResume();
+        Log.e(TAG, "onResume");
+        startBackgroundThread();
+    }
+    /*========================  End 3 ======================== */
+
+    protected void startBackgroundThread() {
+        mBackgroundThread = new HandlerThread("Camera Background");
+        mBackgroundThread.start();
+        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+    }
+    protected void stopBackgroundThread() {
+        mBackgroundThread.quitSafely();
+        try {
+            mBackgroundThread.join();
+            mBackgroundThread = null;
+            mBackgroundHandler = null;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
 
     private ImageReader mImageReader;
     /**
@@ -132,7 +178,13 @@ public class CameraFragment extends Fragment {
         @Override
         public void onImageAvailable(ImageReader reader) {
 //            mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile));
-//            Log.d(TAG, "I'm an image frame!");
+
+            //Hide ProgressBar
+            if(mIsProgressBarVisible){
+                mProgressBar.setVisibility(View.GONE);
+                mIsProgressBarVisible = false;
+            }
+
             try {
                 //------------------------------------------------------
                 //Here the buffer is read.
@@ -171,8 +223,9 @@ public class CameraFragment extends Fragment {
 //                ShowImage(mRGB);
 
                 //Method 2 with JNI
-                Mat mRGB = new Mat(image.getWidth(), image.getHeight(), CvType.CV_8UC3);
+//                mRGB = new Mat(image.getWidth(), image.getHeight(), CvType.CV_8UC3);
                 YUVtoRBG(mRGB.getNativeObjAddr(), nv21, image.getWidth(), image.getHeight());
+
                 ShowImage(mRGB);
 
                 if (image != null)
@@ -183,126 +236,6 @@ public class CameraFragment extends Fragment {
         }
 
     };
-
-    public Mat convertYuv420888ToMat(Image image, boolean isGreyOnly) {
-        int width = image.getWidth();
-        int height = image.getHeight();
-
-        Image.Plane yPlane = image.getPlanes()[0];
-        int ySize = yPlane.getBuffer().remaining();
-
-        if (isGreyOnly) {
-            byte[] data = new byte[ySize];
-            yPlane.getBuffer().get(data, 0, ySize);
-
-            Mat greyMat = new Mat(height + height/2, width, CvType.CV_8UC1);
-            greyMat.put(0, 0, data);
-//            Mat rgbMat = Imgcodecs.imdecode(greyMat, Imgcodecs.IMREAD_COLOR);
-//            Mat m = new Mat(height, width, CvType.CV_8UC1, Scalar.all(250));e
-            Log.v(TAG,"Data:" + Integer.toString(data.length));
-
-//            String cs = Integer.toString(greyMat.rows());
-//            String rs = Integer.toString(greyMat.cols());
-//            Log.v(TAG,"Matrix - Java:"+cs+"x"+rs);
-
-            Mat rgbMat = new Mat(height, width, CvType.CV_8UC3);
-            cvtColor(greyMat, rgbMat, Imgproc.COLOR_GRAY2RGB);
-
-            return rgbMat;
-        }
-
-        Image.Plane uPlane = image.getPlanes()[1];
-        Image.Plane vPlane = image.getPlanes()[2];
-
-        // be aware that this size does not include the padding at the end, if there is any
-        // (e.g. if pixel stride is 2 the size is ySize / 2 - 1)
-        int uSize = uPlane.getBuffer().remaining();
-        int vSize = vPlane.getBuffer().remaining();
-
-        byte[] data = new byte[ySize + (ySize/2)];
-
-        yPlane.getBuffer().get(data, 0, ySize);
-
-        ByteBuffer ub = uPlane.getBuffer();
-        ByteBuffer vb = vPlane.getBuffer();
-
-        int uvPixelStride = uPlane.getPixelStride(); //stride guaranteed to be the same for u and v planes
-        if (uvPixelStride == 1) {
-            uPlane.getBuffer().get(data, ySize, uSize);
-            vPlane.getBuffer().get(data, ySize + uSize, vSize);
-
-            Mat yuvMat = new Mat(height + (height / 2), width, CvType.CV_8UC1);
-            yuvMat.put(0, 0, data);
-            Mat rgbMat = new Mat(height, width, CvType.CV_8UC3);
-            Imgproc.cvtColor(yuvMat, rgbMat, Imgproc.COLOR_YUV2RGB_I420, 3);
-            yuvMat.release();
-            return rgbMat;
-        }
-
-        // if pixel stride is 2 there is padding between each pixel
-        // converting it to NV21 by filling the gaps of the v plane with the u values
-        vb.get(data, ySize, vSize);
-        for (int i = 0; i < uSize; i += 2) {
-            data[ySize + i + 1] = ub.get(i);
-        }
-
-        Mat yuvMat = new Mat(height + (height / 2), width, CvType.CV_8UC1);
-        yuvMat.put(0, 0, data);
-        Mat rgbMat = new Mat(height, width, CvType.CV_8UC3);
-        Imgproc.cvtColor(yuvMat, rgbMat, Imgproc.COLOR_YUV2RGB_NV21, 3);
-        yuvMat.release();
-        return rgbMat;
-    }
-
-    public static Mat imageToMat(Image image) {
-        ByteBuffer buffer;
-        int rowStride;
-        int pixelStride;
-        int width = image.getWidth();
-        int height = image.getHeight();
-        int offset = 0;
-
-        Image.Plane[] planes = image.getPlanes();
-        byte[] data = new byte[image.getWidth() * image.getHeight() * ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8];
-        byte[] rowData = new byte[planes[0].getRowStride()];
-
-        for (int i = 0; i < planes.length; i++) {
-            buffer = planes[i].getBuffer();
-            rowStride = planes[i].getRowStride();
-            pixelStride = planes[i].getPixelStride();
-            int w = (i == 0) ? width : width / 2;
-            int h = (i == 0) ? height : height / 2;
-            for (int row = 0; row < h; row++) {
-                int bytesPerPixel = ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8;
-                if (pixelStride == bytesPerPixel) {
-                    int length = w * bytesPerPixel;
-                    buffer.get(data, offset, length);
-
-                    if (h - row != 1) {
-                        buffer.position(buffer.position() + rowStride - length);
-                    }
-                    offset += length;
-                } else {
-
-
-                    if (h - row == 1) {
-                        buffer.get(rowData, 0, width - pixelStride + 1);
-                    } else {
-                        buffer.get(rowData, 0, rowStride);
-                    }
-
-                    for (int col = 0; col < w; col++) {
-                        data[offset++] = rowData[col * pixelStride];
-                    }
-                }
-            }
-        }
-
-        Mat mat = new Mat(height + height/2, width, CvType.CV_8UC1);
-        mat.put(0, 0, data);
-
-        return mat;
-    }
 
     static {
         System.loadLibrary( "native-lib" );
@@ -315,7 +248,6 @@ public class CameraFragment extends Fragment {
             Log.d(TAG, "OpenCV not loaded");
         }
     }
-
 
     public CameraFragment()  {
         // Required empty public constructor
@@ -356,47 +288,42 @@ public class CameraFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_camera, container, false);
 
         mTextView = (TextView) rootView.findViewById(R.id.camera_textView);
-//        mTextureView = (TextureView) rootView.findViewById(R.id.camera_texture);
         mImageView = (ImageView)  rootView.findViewById(R.id.test_image);
+        mProgressBar = (ProgressBar) rootView.findViewById(R.id.loadingPanel);
+        mFlashButton = (Button) rootView.findViewById(R.id.flash_button);
+        mFlashButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if(view.isActivated()){
+                    setFlash(false);
+                    view.setActivated(false);
+                }else{
+                    view.setActivated(true);
+                    setFlash(true);
+                }
 
-//        mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);//Call mSurfaceTextureListener
+            }
+        });
+
+        //Display ProgressBar
+        mIsProgressBarVisible = true;
 
         openCamera();
         mTextView.setText( stringFromJNI() );
 
+        Log.e(TAG, "Rotation onCreateView");
+
+        // Orientation of image.
+        int currentOrientation = getResources().getConfiguration().orientation;
+        if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
+            // Landscape
+            setRotation(true); //JNI C++
+        } else {
+            // Portrait
+            setRotation(false); //JNI C++
+        }
         return rootView;
     }
-
-    //mSurfaceTextureListener is called after OnCreate.
-    private TextureView.SurfaceTextureListener mSurfaceTextureListener = new TextureView.SurfaceTextureListener(){
-        //it creates a space to preview display.
-        //Invoked when a TextureView's SurfaceTexture is ready for use.
-        @Override
-        public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-            Log.e(TAG, "onSurfaceTextureAvailable, width="+width+",height="+height);
-            //***************************************************************
-            openCamera();
-            //***************************************************************
-        }
-
-        //Invoked when the SurfaceTexture's buffers size changed.
-        @Override
-        public void onSurfaceTextureSizeChanged(SurfaceTexture surface,
-                                                int width, int height) {
-            Log.e(TAG, "onSurfaceTextureSizeChanged");
-        }
-
-        //Invoked when the specified SurfaceTexture is about to be destroyed.
-        @Override
-        public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-            return false;
-        }
-
-        //Invoked when the specified SurfaceTexture is updated through updateTexImage().
-        @Override
-        public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-        }
-    };
 
     //Here the Preview Mode is set on the Screen.
     private void openCamera() {
@@ -506,7 +433,7 @@ public class CameraFragment extends Fragment {
         public void onDisconnected(CameraDevice camera) {
             //Cleaning Matrix created previously.
             jpegMat.release();
-            rgbMat.release();
+            mRGB.release();
             Log.e(TAG, "onDisconnected");
             mCameraDevice.close();
         }
@@ -520,33 +447,20 @@ public class CameraFragment extends Fragment {
     };
 
     protected void startPreview() {
-//|| !mTextureView.isAvailable()
         if(null == mCameraDevice || null == mPreviewSize) {
             Log.e(TAG,"startPreview fail, return");
             return;
         }
 
         try {
-//            SurfaceTexture texture = mTextureView.getSurfaceTexture();
-//            if(null == texture) {
-//                Log.e(TAG,"texture is null, return");
-//                return;
-//            }
-//            // We configure the size of default buffer to be the size of camera preview we want.
-//            texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
-
             // We set up a CaptureRequest.Builder with the output Surface.
             mPreviewBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
 
             // This is the output Surface we need to start preview.
-//            Surface surface = new Surface(texture);
-//            mPreviewBuilder.addTarget(surface);
-
             Surface mImageSurface = mImageReader.getSurface();
             mPreviewBuilder.addTarget(mImageSurface);
 
             // also for preview callbacks
-
             mCameraDevice.createCaptureSession(Arrays.asList(mImageReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
 
@@ -559,6 +473,10 @@ public class CameraFragment extends Fragment {
 
                             // When the session is ready, we start displaying the preview.
                             mPreviewSession = cameraCaptureSession;
+
+                            //***************************************************************
+//                            updatePreview();
+                            //***************************************************************
 
                             try {
 
@@ -576,7 +494,7 @@ public class CameraFragment extends Fragment {
                                 // Finally, we start displaying the camera preview.
                                 mPreviewRequest = mPreviewBuilder.build();
                                 mPreviewSession.setRepeatingRequest(mPreviewRequest,
-                                        mCaptureCallback, mBackgroundHandler);
+                                        null, mBackgroundHandler);
                             } catch (CameraAccessException e) {
                                 e.printStackTrace();
                             }
@@ -587,27 +505,6 @@ public class CameraFragment extends Fragment {
                             Toast.makeText(getContext(), "onConfigureFailed", Toast.LENGTH_LONG).show();
                         }
                     }, null);
-
-//            mCameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
-//
-//                @Override
-//                public void onConfigured(CameraCaptureSession session) {
-//                    //The camera is already closed
-//                    if (null == mCameraDevice) {
-//                        return;
-//                    }
-//                    // When the session is ready, we start displaying the preview.
-//                    mPreviewSession = session;
-//                    //***************************************************************
-//                    updatePreview();
-//                    //***************************************************************
-//                }
-//
-//                @Override
-//                public void onConfigureFailed(CameraCaptureSession session) {
-//                    Toast.makeText(getContext(), "onConfigureFailed", Toast.LENGTH_LONG).show();
-//                }
-//            }, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -619,8 +516,8 @@ public class CameraFragment extends Fragment {
         }
         mPreviewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
 //        mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
-        mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
-        mPreviewBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
+//        mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
+//        mPreviewBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
 
         //Update Flash
         if (false){
@@ -637,34 +534,13 @@ public class CameraFragment extends Fragment {
         //CameraData: The base class for camera controls and information.
         //Update preview Lines
         try {
-            mPreviewSession.setRepeatingRequest(mPreviewBuilder.build(), null, mBackgroundHandler);
+            mPreviewSession.setRepeatingRequest(mPreviewBuilder.build(),
+                                                null,
+                                                mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();  //printStackTrace() helps the programmer to understand where the actual problem occurred, lines in console.
         }
     }
-
-    /**
-     * A {@link CameraCaptureSession.CaptureCallback} that handles events related to JPEG capture.
-     */
-    private CameraCaptureSession.CaptureCallback mCaptureCallback
-            = new CameraCaptureSession.CaptureCallback() {
-
-
-        @Override
-        public void onCaptureProgressed(@NonNull CameraCaptureSession session,
-                                        @NonNull CaptureRequest request,
-                                        @NonNull CaptureResult partialResult) {
-
-        }
-
-        @Override
-        public void onCaptureCompleted(@NonNull CameraCaptureSession session,
-                                       @NonNull CaptureRequest request,
-                                       @NonNull TotalCaptureResult result) {
-
-        }
-
-    };
 
     /**
      * Sets up member variables related to camera.
@@ -700,7 +576,7 @@ public class CameraFragment extends Fragment {
 //                    Log.v(TAG, "   >> mPreviewSize << Width:"+ Integer.toString(currentSize.getWidth()));
 //                }
 
-                Size largest = map.getOutputSizes(SurfaceTexture.class)[5];
+                Size imageSize = map.getOutputSizes(SurfaceTexture.class)[5];
                 //0. 2160x3840
                 //1. 1536x2048
                 //2. 1080x1920
@@ -711,19 +587,20 @@ public class CameraFragment extends Fragment {
                 //7. 240x320
                 //8. 144x176
 
-                Log.v(TAG, "   >> largest << Height: "+ Integer.toString(largest.getHeight()));
-                Log.v(TAG, "   >> largest << Width:"+ Integer.toString(largest.getWidth()));
+                Log.v(TAG, "   >> largest << Height: "+ Integer.toString(imageSize.getHeight()));
+                Log.v(TAG, "   >> largest << Width:"+ Integer.toString(imageSize.getWidth()));
 
 //                mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(),
 //                        ImageFormat.JPEG, /*maxImages*/2);
 
-
-
-                mImageReader = ImageReader.newInstance(largest.getWidth(),
-                                                        largest.getHeight(),
+                mImageReader = ImageReader.newInstance(imageSize.getWidth(),
+                        imageSize.getHeight(),
                                                         ImageFormat.YUV_420_888, 2);
                 mImageReader.setOnImageAvailableListener(
                         mOnImageAvailableListener, mBackgroundHandler);
+
+
+                mRGB = new Mat(imageSize.getWidth(), imageSize.getHeight(), CvType.CV_8UC3);
 
                 // Find out if we need to swap dimension to get the preview size relative to sensor
                 // coordinate.
@@ -900,6 +777,22 @@ public class CameraFragment extends Fragment {
         }
     }
 
+    private void setFlash(boolean value){
+        if (value){
+            mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_TORCH);
+        } else{
+            mPreviewBuilder.set(CaptureRequest.FLASH_MODE, CameraMetadata.FLASH_MODE_OFF);
+
+        }
+        //Update preview Lines
+        try {
+            mPreviewSession.setRepeatingRequest(mPreviewBuilder.build(), null, mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();  //printStackTrace() helps the programmer to understand where the actual problem occurred, lines in console.
+        }
+
+    }
+
     /**
      * A native method that is implemented by the 'native-lib' native library,
      * which is packaged with this application.
@@ -911,6 +804,8 @@ public class CameraFragment extends Fragment {
      * vV: Size of the image to put into the Matrix with OpenCV commands.
      */
     public native void YUVtoRBG(long matAddrRgba, byte[] data, int width, int height);
+
+    public native void setRotation(boolean rotation);
     /*=====================   JNI Part ======================= */
 
 }

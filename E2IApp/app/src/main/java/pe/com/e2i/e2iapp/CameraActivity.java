@@ -6,6 +6,7 @@ import android.os.Build;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.WindowManager;
 import android.widget.Toast;
 
 public class CameraActivity extends AppCompatActivity {
@@ -27,6 +28,15 @@ public class CameraActivity extends AppCompatActivity {
                     .add(R.id.camera_container, fragment )
                     .commit();
         }
+
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        //Increasing Brightness while the App is running.
+        //float brightness=WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
+        float brightness=0.8f;
+        lp.screenBrightness = brightness;
+        getWindow().setAttributes(lp);
+
+
 
         //Version over Mashmellow have another way to check permissions
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){

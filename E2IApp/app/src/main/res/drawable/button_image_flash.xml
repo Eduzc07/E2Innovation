@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?> 
+<selector xmlns:android="http://schemas.android.com/apk/res/android"> 
+    <item android:state_activated="true">
+        <bitmap android:src="@drawable/lightflash_press"/>
+    </item>
+    <item>
+        <bitmap android:src="@drawable/lightflash"/>
+    </item>
+</selector>
+
+

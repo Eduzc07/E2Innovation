@@ -41,6 +41,21 @@ Java_pe_com_e2i_e2iapp_CameraFragment_YUVtoRBGTest(
     return;
 }
 
+
+
+bool mIsRotated = false;
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_pe_com_e2i_e2iapp_CameraFragment_setRotation(
+        JNIEnv* env,
+        jobject,
+        jboolean value)
+{
+    mIsRotated = value;
+    return;
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_pe_com_e2i_e2iapp_CameraFragment_YUVtoRBG(
@@ -62,8 +77,8 @@ Java_pe_com_e2i_e2iapp_CameraFragment_YUVtoRBG(
     Mat mBgr(height, width, CV_8UC3);
     cv::cvtColor(mNV, mBgr, CV_YUV2RGB_NV21);
 
-    flip(mBgr.t(), mBgr, 1);
-
+    if(!mIsRotated)
+        flip(mBgr.t(), mBgr, 1);
 
     Mat src_gray;
 //
@@ -128,6 +143,8 @@ Java_pe_com_e2i_e2iapp_CameraFragment_YUVtoRBG(
         }
     }
 
+
+    //------------------------------------------------------------------------------
 //    vector<Vec3f> circles;
 //
 //    /// Apply the Hough Transform to find the circles
@@ -148,6 +165,7 @@ Java_pe_com_e2i_e2iapp_CameraFragment_YUVtoRBG(
 //    rectangle(mBgr, Point(0, 0), Point(height, width), Scalar(255, 255, 255), 5);
 
 //    cvtColor( dst, mBgr, CV_GRAY2BGR );
+    //------------------------------------------------------------------------------
 
     double e2 = (double) getTickCount();
     double time = (e2 - e1)/ getTickFrequency();
