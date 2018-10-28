@@ -41,109 +41,182 @@ Java_pe_com_e2i_e2iapp_CameraFragment_YUVtoRBGTest(
     return;
 }
 
+int numIter = 0;
+int biggestSide = 0;
 
+//Variables
+int ksize = 3;
+int scale = 1;
+int delta = 0;
+int ddepth = CV_16S;
+Mat mNV;
+Mat mBgr;
 
-bool mIsRotated = false;
+Mat outImg;
+Mat src_gray;
+Mat blured;
+Mat grad;
+Mat grad_x, grad_y;
+Mat abs_grad_x, abs_grad_y;
+Mat dst;
+
+vector<Rect> currentBoundRect;
+double moneyValue;
+//Mat src_gray = Mat(480, 640, CV_8UC1);
+//Mat blured = Mat(480, 640, CV_8UC1);
+//Mat grad_x = Mat(480, 640, CV_8UC1);
+//Mat grad_y = Mat(480, 640, CV_8UC1);
+//Mat grad = Mat(480, 640, CV_8UC1);
+//Mat abs_grad_x = Mat(480, 640, CV_8UC1);
+//Mat abs_grad_y = Mat(480, 640, CV_8UC1);
+//Mat dst = Mat(480, 640, CV_8UC1);
+
+double factor = 1.0;
+
+Rect getBox(Rect input);
 
 extern "C"
-JNIEXPORT void JNICALL
-Java_pe_com_e2i_e2iapp_CameraFragment_setRotation(
-        JNIEnv* env,
-        jobject,
-        jboolean value)
-{
-    mIsRotated = value;
-    return;
-}
-
-extern "C"
-JNIEXPORT void JNICALL
+JNIEXPORT int JNICALL
 Java_pe_com_e2i_e2iapp_CameraFragment_YUVtoRBG(
         JNIEnv* env,
         jobject,
         jlong addrRgba,
         jbyteArray YUVFrameData,
         jint width,
-        jint height)
+        jint height,
+        jboolean value)
 {
-
+    bool isRotated = value;
     double e1 = (double) getTickCount();
 
     //A new name into C++ space "mRgb" to the Matrix saved in Java which is located in "addrRgba" is assigned.
     Mat& mRgb = *(Mat*)addrRgba;
 
     jbyte * pYUVFrameData = env->GetByteArrayElements(YUVFrameData, 0);
-    Mat mNV(height + height/2, width, CV_8UC1, (unsigned char*)pYUVFrameData);
-    Mat mBgr(height, width, CV_8UC3);
+    mNV = Mat(height + height/2, width, CV_8UC1, (unsigned char*)pYUVFrameData);
+    mBgr = Mat(height, width, CV_8UC3);
     cv::cvtColor(mNV, mBgr, CV_YUV2RGB_NV21);
+    mNV.release();
 
-    if(!mIsRotated)
+    //Rotate Image to display
+    if(!isRotated)
         flip(mBgr.t(), mBgr, 1);
 
-    Mat src_gray;
-//
+    if(numIter == 5){
+        numIter = 0;
+        currentBoundRect.clear();
+    }
+
+    if(numIter != 0){
+        Scalar color = Scalar(50, 200, 50);
+        /// Draw contours
+        for( int i = 0; i< currentBoundRect.size(); i++ ) {
+            Rect newBox = getBox(currentBoundRect[i]);
+            rectangle( mBgr, newBox.tl(), newBox.br(), color, 2 );
+
+            char val[20];
+            sprintf(val, "%1.1f%%", moneyValue);
+            putText(mBgr, val, newBox.tl(), CV_FONT_HERSHEY_COMPLEX_SMALL, 1, Scalar(255,0,0));
+        }
+        double e2 = (double) getTickCount();
+        double time = (e2 - e1)/ getTickFrequency();
+
+        char delay[20];
+        sprintf(delay, "Delay: %1.2f ms   ", time*1e3);
+        putText(mBgr, delay , Point(10, 30),CV_FONT_HERSHEY_PLAIN ,2, Scalar(255,0,0));
+
+        numIter++;
+        mBgr.copyTo(mRgb);
+        return 0;
+    }
+
+    resize(mBgr, outImg, cv::Size(), factor, factor);
+
     /// Convert it to gray
-    cvtColor( mBgr, src_gray, CV_BGR2GRAY );
+    cvtColor( outImg, src_gray, CV_BGR2GRAY );
+    outImg.release();
 
     /// Reduce the noise so we avoid false circle detection
-    blur( src_gray, src_gray, Size(5, 5));
+    blur(src_gray, blured, Size(3, 3));
+    src_gray.release(); // free mem
 
-    int ksize = 3;
-    int scale = 1;
-    int delta = 0;
-    int ddepth = CV_16S;
+    Sobel(blured, grad_x, ddepth, 1, 0, ksize, scale, delta, BORDER_DEFAULT);
+    Sobel(blured, grad_y, ddepth, 0, 1, ksize, scale, delta, BORDER_DEFAULT);
 
-    Mat grad;
-    Mat grad_x, grad_y;
-    Mat abs_grad_x, abs_grad_y;
-    Sobel(src_gray, grad_x, ddepth, 1, 0, ksize, scale, delta, BORDER_DEFAULT);
-    Sobel(src_gray, grad_y, ddepth, 0, 1, ksize, scale, delta, BORDER_DEFAULT);
+    blured.release(); // free mem
+
     // converting back to CV_8U
     convertScaleAbs(grad_x, abs_grad_x);
     convertScaleAbs(grad_y, abs_grad_y);
     addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0, grad);
+    grad_x.release();
+    grad_y.release();
+    abs_grad_x.release();
+    abs_grad_y.release();
 
-    Mat dst;
-    threshold( grad, dst, 100, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+    threshold(grad, dst, 100, 255, CV_THRESH_BINARY | CV_THRESH_OTSU);
+    grad.release();
 
     vector<vector<Point> > contours;
     vector<Vec4i> hierarchy;
 
 //    Mat canny_output;
-    /// Detect edges using canny
+    // Detect edges using canny
 //    Canny( dst, canny_output, 50, 100, 3 );
 
     /// Find contours
-    findContours( dst, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
+    findContours(dst, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0) );
 
+    //Run if it s empty
+    if (contours.size() == 0){
+        double e2 = (double) getTickCount();
+        double time = (e2 - e1)/ getTickFrequency();
+
+        char delay[20];
+        sprintf(delay, "Delay: %1.2f ms", time*1e3);
+        putText(mBgr, delay , Point(10, 30),CV_FONT_HERSHEY_PLAIN ,2, Scalar(255,0,0));
+
+        mBgr.copyTo(mRgb);
+        return 0;
+    }
 
     vector<vector<Point> > contours_poly( contours.size() );
     vector<Rect> boundRect( contours.size() );
-    vector<Point2f>centers( contours.size() );
-    vector<float>radius( contours.size() );
+//    vector<Point2f>centers( contours.size() );
+//    vector<float>radius( contours.size() );
+
+    double biggestArea = 0;
     /// Draw contours
-    Mat drawing = Mat::zeros( mBgr.size(), CV_8UC3 );
     for( int i = 0; i< contours.size(); i++ ) {
         double area = contourArea(contours[i]);
-        if ( area > 1e3 && area < 4e4){
+        if ( area > 1e3*factor && area < 4e4*factor){
             Scalar color = Scalar(50, 200, 50);
 //            drawContours( mBgr, contours, i, color, 2, 8, hierarchy, 0, Point() );
 
             approxPolyDP( contours[i], contours_poly[i], 3, true );
             boundRect[i] = boundingRect( contours_poly[i] );
-            minEnclosingCircle( contours_poly[i], centers[i], radius[i] );
+//            minEnclosingCircle( contours_poly[i], centers[i], radius[i] );
 
             if (abs(boundRect[i].height - boundRect[i].width) < 20){
-                rectangle( mBgr, boundRect[i].tl(), boundRect[i].br(), color, 2 );
+//                rectangle( mBgr, boundRect[i].tl()/factor, boundRect[i].br()/factor, color, 2 );
 //                char name[20];
 //                sprintf(name, "%1.0f", (double)boundRect[i].area());
 //                putText(mBgr, name,centers[i],CV_FONT_HERSHEY_SIMPLEX ,1, color);
-            }
+                currentBoundRect.push_back(boundRect[i]);
 
+                if (biggestArea < area){
+                    biggestSide = (boundRect[i].height + boundRect[i].width)/2;
+                    biggestArea = area;
+                }
+            }
         }
     }
+    contours.clear();
+    hierarchy.clear();
+    contours_poly.clear();
+    boundRect.clear();
 
-
+    numIter++;
     //------------------------------------------------------------------------------
 //    vector<Vec3f> circles;
 //
@@ -167,12 +240,22 @@ Java_pe_com_e2i_e2iapp_CameraFragment_YUVtoRBG(
 //    cvtColor( dst, mBgr, CV_GRAY2BGR );
     //------------------------------------------------------------------------------
 
-    double e2 = (double) getTickCount();
-    double time = (e2 - e1)/ getTickFrequency();
+//    double e2 = (double) getTickCount();
+//    double time = (e2 - e1)/ getTickFrequency();
+//
+//    char delay[20];
+//    sprintf(delay, "Delay: %1.2f ms", time*1e3);
+//    putText(mBgr, delay , Point(10, 30),CV_FONT_HERSHEY_PLAIN ,2, Scalar(255,0,0));
+//
+//    mBgr.copyTo(mRgb);
+    return 0;
+}
 
-    char delay[20];
-    sprintf(delay, "Delay: %1.2f ms", time*1e3);
-    putText(mBgr, delay , Point(10, 30),CV_FONT_HERSHEY_PLAIN ,2, Scalar(255,0,0));
+Rect getBox(Rect input){
+    int px = input.x/factor + input.width/(2*factor) - biggestSide/2;
+    int py = input.y/factor + input.height/(2*factor) - biggestSide/2;
+    Rect newBox = Rect(px, py, biggestSide, biggestSide);
 
-    mBgr.copyTo(mRgb);
+    moneyValue = input.area() * 100.0 / newBox.area();
+    return newBox;
 }

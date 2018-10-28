@@ -32,11 +32,12 @@ public class CameraActivity extends AppCompatActivity {
         WindowManager.LayoutParams lp = getWindow().getAttributes();
         //Increasing Brightness while the App is running.
         //float brightness=WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
-        float brightness=0.8f;
+        float brightness=0.9f;
         lp.screenBrightness = brightness;
         getWindow().setAttributes(lp);
 
-
+        //Keep the Screen On
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         //Version over Mashmellow have another way to check permissions
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){

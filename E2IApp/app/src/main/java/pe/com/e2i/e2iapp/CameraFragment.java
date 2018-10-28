@@ -75,7 +75,8 @@ public class CameraFragment extends Fragment {
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
 
-    private Mat 		mRGB; // Decode jpegMat in rgbMat, also it contains the image after JNI (C++ and OpenCV).
+    private Boolean mIsRotated = false;
+    private Mat 	mRGB; // Decode jpegMat in rgbMat, also it contains the image after JNI (C++ and OpenCV).
     private Boolean mIsProgressBarVisible = false;
     private Handler mBackgroundHandler;
     private HandlerThread mBackgroundThread;
@@ -191,7 +192,7 @@ public class CameraFragment extends Fragment {
 
                 //Method 2 with JNI
 //                mRGB = new Mat(image.getWidth(), image.getHeight(), CvType.CV_8UC3);
-                YUVtoRBG(mRGB.getNativeObjAddr(), nv21, image.getWidth(), image.getHeight());
+                YUVtoRBG(mRGB.getNativeObjAddr(), nv21, image.getWidth(), image.getHeight(), mIsRotated);
 
                 ShowImage(mRGB);
 
@@ -258,10 +259,10 @@ public class CameraFragment extends Fragment {
         int currentOrientation = getResources().getConfiguration().orientation;
         if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
             // Landscape
-            setRotation(true); //JNI C++
+            mIsRotated = true; //JNI C++
         } else {
             // Portrait
-            setRotation(false); //JNI C++
+            mIsRotated = false; //JNI C++
         }
         return rootView;
     }
@@ -703,9 +704,7 @@ public class CameraFragment extends Fragment {
      * vT: Times we ask for a photo.
      * vV: Size of the image to put into the Matrix with OpenCV commands.
      */
-    public native void YUVtoRBG(long matAddrRgba, byte[] data, int width, int height);
-
-    public native void setRotation(boolean rotation);
+    public native int YUVtoRBG(long matAddrRgba, byte[] data, int width, int height, boolean rotation);
     /*=====================   JNI Part ======================= */
 
 }
