@@ -2,11 +2,13 @@ package pe.com.e2i.e2iapp;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
+import android.hardware.SensorManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -18,7 +20,9 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
 
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
@@ -26,6 +30,7 @@ import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.View;
@@ -42,10 +47,13 @@ import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
-
 
 /**
  * A simple {@link Fragment} subclass.
@@ -57,6 +65,7 @@ public class CameraFragment extends Fragment {
     private ImageView mImageView;
     private ProgressBar mProgressBar;
     private Button mFlashButton;
+    private Button mPhotoButton;
 
     private Size mPreviewSize; //Size of the preview Image
     private CameraDevice 				mCameraDevice; //The CameraDevice class is a representation of a single camera connected to an Android device
@@ -76,6 +85,12 @@ public class CameraFragment extends Fragment {
     }
 
     private Boolean mIsRotated = false;
+    private Boolean mTakeImage = false;
+    private int mRefImage = 0;
+    private Boolean mGrabbing = false;
+    private Boolean m_bDisplayRef = false;
+    private int m_iCount = 0;
+
     private Mat 	mRGB; // Decode jpegMat in rgbMat, also it contains the image after JNI (C++ and OpenCV).
     private Boolean mIsProgressBarVisible = false;
     private Handler mBackgroundHandler;
@@ -147,6 +162,7 @@ public class CameraFragment extends Fragment {
         public void onImageAvailable(ImageReader reader) {
 //            mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile));
 
+
             //Hide ProgressBar
             if(mIsProgressBarVisible){
                 mProgressBar.setVisibility(View.GONE);
@@ -159,13 +175,11 @@ public class CameraFragment extends Fragment {
                 Image image =  reader.acquireNextImage();
                 if (image == null)
                     return;
-
                 //------------------------------------------------------
 //                String cs = Integer.toString(image.getHeight());
 //                String rs = Integer.toString(image.getWidth());
 //                Log.v(TAG,"Image - Java:"+cs+"x"+rs);
 
-                byte[] nv21;
                 ByteBuffer yBuffer = image.getPlanes()[0].getBuffer();
                 ByteBuffer uBuffer = image.getPlanes()[1].getBuffer();
                 ByteBuffer vBuffer = image.getPlanes()[2].getBuffer();
@@ -174,12 +188,20 @@ public class CameraFragment extends Fragment {
                 int uSize = uBuffer.remaining();
                 int vSize = vBuffer.remaining();
 
+                byte[] nv21;
                 nv21 = new byte[ySize + uSize + vSize];
 
                 //U and V are swapped
                 yBuffer.get(nv21, 0, ySize);
                 vBuffer.get(nv21, ySize, vSize);
                 uBuffer.get(nv21, ySize + vSize, uSize);
+
+                if (mTakeImage){
+                    Mat rgb  = new Mat();
+                    YUVtoRBG(rgb.getNativeObjAddr(), nv21, image.getWidth(), image.getHeight(), mIsRotated);
+                    save(rgb);
+                    mTakeImage = false;
+                }
 
                 //Method 1 in JAVA
 //                Mat mYuv = new Mat(image.getHeight() + image.getHeight() / 2, image.getWidth(), CvType.CV_8UC1);
@@ -192,14 +214,66 @@ public class CameraFragment extends Fragment {
 
                 //Method 2 with JNI
 //                mRGB = new Mat(image.getWidth(), image.getHeight(), CvType.CV_8UC3);
-                YUVtoRBG(mRGB.getNativeObjAddr(), nv21, image.getWidth(), image.getHeight(), mIsRotated);
 
-                ShowImage(mRGB);
+                if (mGrabbing && !m_bDisplayRef){
+                    runMain(mRGB.getNativeObjAddr(), nv21, image.getWidth(), image.getHeight(), mIsRotated);
+                    ShowImage(mRGB);
+                }
+
+                if (m_bDisplayRef) {
+                    m_iCount++;
+                    if (m_iCount > 50 ){
+                        m_bDisplayRef = false;
+                        m_iCount = 0;
+                    }
+                }
 
                 if (image != null)
                     image.close();
             } catch (IllegalStateException e) {
                 Log.d(TAG, "mImageAvailable() Too many images acquired");
+            }
+        }
+
+        //Save in SD Card!.
+        private void save(Mat imageMat) {
+
+            Bitmap imgMap;
+            imgMap = Bitmap.createBitmap(imageMat.cols(),
+                    imageMat.rows(),
+                    Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(imageMat, imgMap);
+
+            Log.d(TAG, "Dir:  " + Environment.getExternalStorageDirectory());
+            //File where the image will be saved.
+
+            FileOutputStream outStream = null;
+            File sdCard = Environment.getExternalStorageDirectory();
+            File dir = new File(sdCard.getAbsolutePath() + "/DCIM/E2IApp");
+            dir.mkdirs();
+            String fileName = String.format("%d.jpg", System.currentTimeMillis());
+            File outFile = new File(dir, fileName);
+
+            //Display message
+            CharSequence text = fileName + " saved.";
+            int duration = Toast.LENGTH_SHORT;
+            Toast toast = Toast.makeText(getActivity(), text, duration);
+            toast.setGravity( Gravity.CENTER, 0, 0);
+            toast.show();
+
+            try {
+                outStream = new FileOutputStream(outFile);
+                imgMap.compress(Bitmap.CompressFormat.JPEG, 100, outStream);
+                outStream.flush();
+                outStream.close();
+
+                //Add the picture to the gallery
+                Intent galleryIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
+                Uri picUri = Uri.fromFile(outFile);
+                galleryIntent.setData(picUri);
+                getActivity().sendBroadcast(galleryIntent);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
 
@@ -239,13 +313,21 @@ public class CameraFragment extends Fragment {
                 if(view.isActivated()){
                     setFlash(false);
                     view.setActivated(false);
-                }else{
+                } else {
                     view.setActivated(true);
                     setFlash(true);
                 }
-
             }
         });
+
+        mPhotoButton = (Button) rootView.findViewById(R.id.takePhoto_button);
+        mPhotoButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                takePhoto();
+            }
+        });
+
 
         //Display ProgressBar
         mIsProgressBarVisible = true;
@@ -287,7 +369,7 @@ public class CameraFragment extends Fragment {
             }
 
             mPreviewSize = map.getOutputSizes(SurfaceTexture.class)[4];
-            //Sony Experia,it could change between devices.
+            //Sony Experia, it could change between devices.
             //0. 2160x3840
             //1. 1536x2048
             //2. 1080x1920
@@ -310,8 +392,7 @@ public class CameraFragment extends Fragment {
             boolean Flash = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
             if (Flash){
                 Log.v(TAG, "Flash Available."); //tag:Device to see in Log.Cat
-            }
-            else{
+            } else {
                 Log.v(TAG, "Flash Disabled.");  //tag:Device to see in Log.Cat
             }
 
@@ -401,6 +482,8 @@ public class CameraFragment extends Fragment {
             Surface mImageSurface = mImageReader.getSurface();
             mPreviewBuilder.addTarget(mImageSurface);
 
+            mGrabbing = true;
+
             // also for preview callbacks
             mCameraDevice.createCaptureSession(Arrays.asList(mImageReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
@@ -420,12 +503,11 @@ public class CameraFragment extends Fragment {
                             //***************************************************************
 
                             try {
+                                mPreviewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+//                                mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
+                                mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
 
-//                                mPreviewBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-//        mPreviewBuilder.set(CaptureRequest.CONTROL_AE_MODE, CameraMetadata.CONTROL_AE_MODE_ON);
-//                                mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
-//
-//                                // Auto focus should be continuous for camera preview.
+                                // Auto focus should be continuous for camera preview.
                                 mPreviewBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
 
@@ -691,7 +773,42 @@ public class CameraFragment extends Fragment {
         } catch (CameraAccessException e) {
             e.printStackTrace();  //printStackTrace() helps the programmer to understand where the actual problem occurred, lines in console.
         }
+    }
 
+    private void takePhoto(){
+        Log.d(TAG, "take photo!");
+        //mTakeImage = true;
+        //mImageReader.close();
+        if (mRefImage == 0){
+            m_bDisplayRef = true;
+            Mat rgb  = new Mat();
+            getRef(rgb.getNativeObjAddr());
+            ShowImage(rgb);
+
+            //Display message
+            CharSequence text = "Reference has been taken.";
+            int duration = Toast.LENGTH_SHORT;
+            Toast toast = Toast.makeText(getActivity(), text, duration);
+            toast.setGravity( Gravity.CENTER, 0, 0);
+            toast.show();
+        }
+
+        if (mRefImage == 1){
+            //mImageReader.close();
+            //mCameraDevice.close();
+            //closeCamera();
+            mGrabbing = false;
+            Mat image  = new Mat();
+            checkPencil(image.getNativeObjAddr());
+            ShowImage(image);
+        }
+
+        if (mRefImage >= 2){
+            mGrabbing = true;
+            mRefImage = -1;
+        }
+
+        mRefImage++;
     }
 
     /**
@@ -705,6 +822,12 @@ public class CameraFragment extends Fragment {
      * vV: Size of the image to put into the Matrix with OpenCV commands.
      */
     public native int YUVtoRBG(long matAddrRgba, byte[] data, int width, int height, boolean rotation);
+
+    public native int runMain(long matAddrRgba, byte[] data, int width, int height, boolean rotation);
+
+    public native int getRef(long matAddrRgba);
+
+    public native int checkPencil(long matAddrRgba);
     /*=====================   JNI Part ======================= */
 
 }

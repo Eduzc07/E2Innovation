@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.WindowManager;
 
 public class MainActivity extends AppCompatActivity implements MainFragment.Callback {
 
@@ -30,6 +31,14 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Call
         } else {
             getSupportActionBar().setElevation(0f);
         }
+
+        //Set Brightness
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        //Increasing Brightness while the App is running.
+        //float brightness=WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
+        float brightness=0.8f;
+        lp.screenBrightness = brightness;
+        getWindow().setAttributes(lp);
 
         // Example of a call to a native method
 //        TextView tv = (TextView) findViewById( R.id.sample_text );

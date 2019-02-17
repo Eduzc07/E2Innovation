@@ -34,6 +34,14 @@
         android:layout_alignParentTop="true"
         android:textSize="25sp" />
 
+    <Button
+        android:id="@+id/takePhoto_button"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="@drawable/button_camera"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"
+        android:textSize="25sp" />
 
     <TextView
         android:id="@+id/camera_textView"
