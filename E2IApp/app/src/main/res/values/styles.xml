@@ -14,21 +14,20 @@
 
     <!-- Main activity theme. -->
     <style name="MainTheme" parent="AppTheme">
-        <item name="actionBarStyle">@style/ActionBar.Solid.E2IApp.NoTitle</item>
+        <!--<item name="actionBarStyle">@style/ActionBar.Solid.E2IApp.NoTitle</item>-->
     </style>
 
     <!-- main activity action bar styles -->
-    <style name="ActionBar.Solid.E2IApp.NoTitle" parent="@style/Widget.AppCompat.Light.ActionBar.Solid.Inverse">
-        <item name="displayOptions">useLogo|showHome</item>
-        <item name="logo">@drawable/ic_logo</item>
-    </style>
+    <!--<style name="ActionBar.Solid.E2IApp.NoTitle" parent="@style/Widget.AppCompat.Light.ActionBar.Solid.Inverse">-->
+        <!--<item name="displayOptions">useLogo|showHome</item>-->
+        <!--<item name="logo">@drawable/ic_logo</item>-->
+    <!--</style>-->
 
     <!-- Settings activity theme. -->
     <style name="SettingsTheme" parent="@android:style/Theme.Material.Light.DarkActionBar">
         <item name="android:colorPrimary">@color/colorPrimary</item>
         <item name="android:colorPrimaryDark">@color/colorPrimaryDark</item>
     </style>
-
 
     <!-- Camera activity theme. -->
     <style name="CameraTheme" parent="@style/Theme.AppCompat.DayNight.NoActionBar.FullScreen"/>

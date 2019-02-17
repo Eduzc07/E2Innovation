@@ -387,7 +387,7 @@ public class CameraFragment extends Fragment {
 
             //Show the Focal lengths Available
             float[] lensDistances = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS); //Run ok
-            Log.v(TAG, "This deviced supported focal lengths of "+ Utility.floatArrayToString(lensDistances)); //tag:Device to see in Log.Cat
+            Log.v(TAG, "This device supported focal lengths of "+ Utility.floatArrayToString(lensDistances)); //tag:Device to see in Log.Cat
 
             boolean Flash = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
             if (Flash){

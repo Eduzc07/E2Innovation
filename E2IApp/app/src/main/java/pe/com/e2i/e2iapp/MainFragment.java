@@ -65,14 +65,13 @@ public class MainFragment extends Fragment {
 //        return fragment;
 //    }
 
-//    @Override
-//    public void onCreate(Bundle savedInstanceState) {
-//        super.onCreate( savedInstanceState );
-//        if (getArguments() != null) {
-//            mParam1 = getArguments().getString( ARG_PARAM1 );
-//            mParam2 = getArguments().getString( ARG_PARAM2 );
-//        }
-//    }
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate( savedInstanceState );
+        //Add the name of the current Menu
+        String title = "Inspección de Lápices";
+        getActivity().setTitle(title);
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -80,7 +79,7 @@ public class MainFragment extends Fragment {
 
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
-        mCameraButton = (Button) rootView.findViewById(R.id.main_camera_button);
+        mCameraButton = (Button) rootView.findViewById(R.id.main_cameraRef_button);
         mCameraButton.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View v) {

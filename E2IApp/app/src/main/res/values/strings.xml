@@ -25,4 +25,7 @@
     <string name="pref_currency_label_Dolar">Dolar (\u0024)</string>
     <string name="pref_currency_label_Sol">Sol (S/.)</string>
 
+    <string name="pref_check">\u2714</string>
+    <string name="pref_checkX">\u2717</string>
+
 </resources>
