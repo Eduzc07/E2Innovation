@@ -1,9 +1,12 @@
 package pe.com.e2i.e2iapp;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
 //import android.app.Fragment;
+import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -16,7 +19,7 @@ import android.widget.TextView;
 
 public class MainFragment extends Fragment {
 
-    private final String LOG_TAG = MainActivity.class.getSimpleName();
+    private final String LOG_TAG = MainFragment.class.getSimpleName();
 
     // TODO: Rename parameter arguments, choose names that match
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
@@ -27,7 +30,10 @@ public class MainFragment extends Fragment {
     private String mParam1;
     private String mParam2;
 
+    private Button mReferenceImageButton;
     private Button mCameraButton;
+    private TextView mTextViewCheck;
+    private TextView mTextViewCheckX;
 
 //    private OnFragmentInteractionListener mListener;
 
@@ -71,6 +77,38 @@ public class MainFragment extends Fragment {
         //Add the name of the current Menu
         String title = "Inspección de Lápices";
         getActivity().setTitle(title);
+
+        Log.v(LOG_TAG, ">> onCreate << ");
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        Log.v(LOG_TAG, ">> onResume << ");
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+        Boolean enableCheck = prefs.getBoolean("eCheck", false);
+        if (enableCheck) {
+            mTextViewCheck.setVisibility( View.VISIBLE );
+            mTextViewCheckX.setVisibility( View.GONE );
+            mCameraButton.setEnabled(true);
+        } else {
+            mTextViewCheck.setVisibility( View.GONE );
+            mTextViewCheckX.setVisibility( View.VISIBLE );
+            mCameraButton.setEnabled(false);
+        }
+
+        int refWidth = prefs.getInt("refWidth", -1);
+        int refHeight = prefs.getInt("refHeight", -1);
+
+        Log.v(LOG_TAG, ">> refWidth << " + Integer.toString(refWidth) );
+        Log.v(LOG_TAG, ">> refHeight << " + Integer.toString(refHeight) );
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        Log.v(LOG_TAG, ">> onPause << ");
     }
 
     @Override
@@ -79,13 +117,39 @@ public class MainFragment extends Fragment {
 
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
-        mCameraButton = (Button) rootView.findViewById(R.id.main_cameraRef_button);
+        mReferenceImageButton = (Button) rootView.findViewById(R.id.main_cameraRef_button);
+        mReferenceImageButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ((Callback) getActivity()).onViewCamera();
+            }
+        });
+
+        mCameraButton = (Button) rootView.findViewById(R.id.main_camera_button);
         mCameraButton.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 ((Callback) getActivity()).onViewCamera();
             }
         });
+        mCameraButton.setEnabled(false);
+
+        Log.v(LOG_TAG, ">> onCreateView << ");
+
+        mTextViewCheck = (TextView) rootView.findViewById(R.id.main_text_check);
+        mTextViewCheckX = (TextView) rootView.findViewById(R.id.main_text_checkX);
+
+        //Create share boolean
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean("eCheck", false);
+        editor.putInt("refWidth", 0);
+        editor.putInt("refHeight", 0);
+        editor.apply();
+
+        mTextViewCheck.setVisibility(View.GONE);
+        mTextViewCheckX.setVisibility(View.VISIBLE);
+
         // Inflate the layout for this fragment
         return rootView;
     }
@@ -128,5 +192,5 @@ public class MainFragment extends Fragment {
 //        // TODO: Update argument type and name
 //        void onFragmentInteraction(Uri uri);
 //    }
-
 }
+

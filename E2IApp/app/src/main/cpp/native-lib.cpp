@@ -521,3 +521,21 @@ Java_pe_com_e2i_e2iapp_CameraFragment_checkPencil(
     mLastImage.copyTo(mRgb);
     return 0;
 }
+
+extern "C"
+JNIEXPORT int JNICALL
+Java_pe_com_e2i_e2iapp_CameraFragment_getWidth(
+        JNIEnv* env,
+        jobject)
+{
+    return mRefRect.width;
+}
+
+extern "C"
+JNIEXPORT int JNICALL
+Java_pe_com_e2i_e2iapp_CameraFragment_getHeight(
+        JNIEnv* env,
+        jobject)
+{
+    return mRefRect.height;
+}

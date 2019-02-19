@@ -3,6 +3,7 @@ package pe.com.e2i.e2iapp;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
@@ -25,6 +26,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.util.Log;
@@ -49,8 +51,6 @@ import org.opencv.core.Mat;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -90,6 +90,8 @@ public class CameraFragment extends Fragment {
     private Boolean mGrabbing = false;
     private Boolean m_bDisplayRef = false;
     private int m_iCount = 0;
+    private int m_iRefWidth = 0;
+    private int m_iRefHeight = 0;
 
     private Mat 	mRGB; // Decode jpegMat in rgbMat, also it contains the image after JNI (C++ and OpenCV).
     private Boolean mIsProgressBarVisible = false;
@@ -325,6 +327,20 @@ public class CameraFragment extends Fragment {
             @Override
             public void onClick(View view) {
                 takePhoto();
+
+                //Save the Current Option selected
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+                SharedPreferences.Editor editor = prefs.edit();
+
+                if (m_iRefWidth != 0 && m_iRefHeight != 0){
+                    editor.putBoolean("eCheck", true);
+                    editor.putInt("refWidth", m_iRefWidth);
+                    editor.putInt("refHeight", m_iRefHeight);
+                } else {
+                    editor.putBoolean("eCheck", false);
+                }
+
+                editor.apply();
             }
         });
 
@@ -368,7 +384,7 @@ public class CameraFragment extends Fragment {
                 Log.v(TAG, "   >> mPreviewSize << Width:"+ Integer.toString(currentSize.getWidth()));
             }
 
-            mPreviewSize = map.getOutputSizes(SurfaceTexture.class)[4];
+            mPreviewSize = map.getOutputSizes(SurfaceTexture.class)[5];
             //Sony Experia, it could change between devices.
             //0. 2160x3840
             //1. 1536x2048
@@ -785,6 +801,9 @@ public class CameraFragment extends Fragment {
             getRef(rgb.getNativeObjAddr());
             ShowImage(rgb);
 
+            m_iRefWidth = getWidth();
+            m_iRefHeight = getHeight();
+
             //Display message
             CharSequence text = "Reference has been taken.";
             int duration = Toast.LENGTH_SHORT;
@@ -828,6 +847,10 @@ public class CameraFragment extends Fragment {
     public native int getRef(long matAddrRgba);
 
     public native int checkPencil(long matAddrRgba);
+
+    public native int getWidth();
+
+    public native int getHeight();
     /*=====================   JNI Part ======================= */
 
 }
