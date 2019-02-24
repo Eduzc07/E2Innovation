@@ -61,8 +61,8 @@ Mat abs_grad_x, abs_grad_y;
 //Mat dst;
 Mat mLastImage;
 Mat mReferenceImage;
-Rect mRefRect;
-
+Rect mRefRect = Rect(0,0,0,0);
+Rect mTestRect = Rect(0,0,0,0);
 
 vector<Rect> currentBoundRect;
 double moneyValue;
@@ -166,7 +166,7 @@ Java_pe_com_e2i_e2iapp_CameraFragment_runMain(
 
         char delay[20];
         sprintf(delay, "Delay: %1.2f ms   ", time*1e3);
-        putText(mBgr, delay , Point(10, 30),CV_FONT_HERSHEY_PLAIN ,2, Scalar(255,0,0));
+        putText(mBgr, delay , Point(10, 30), CV_FONT_HERSHEY_PLAIN, 1, Scalar(255,0,0));
 
         numIter++;
         mBgr.copyTo(mRgb);
@@ -305,6 +305,9 @@ Rect getBox(Rect input){
 
 double getWear(Rect refSize, Rect testSize)
 {
+    if (refSize.area()== 0 || testSize.area()== 0)
+        return 0;
+
     double widthRef;
     double heightRef;
 
@@ -314,6 +317,8 @@ double getWear(Rect refSize, Rect testSize)
     } else {
         widthRef = refSize.height;
         heightRef = refSize.width;
+        mRefRect.width = widthRef;
+        mRefRect.height = heightRef;
     }
 
     double widthTest;
@@ -325,12 +330,14 @@ double getWear(Rect refSize, Rect testSize)
     } else {
         widthTest = testSize.height;
         heightTest = testSize.width;
+        mTestRect.width = widthTest;
+        mTestRect.height = heightTest;
     }
 
     double f = widthRef / widthTest;
 
     double wear = f*heightTest*100./heightRef;
-    return wear;
+    return wear>100?100.:wear;
 }
 
 Rect getSize(Mat& srcOrig){
@@ -344,7 +351,7 @@ Rect getSize(Mat& srcOrig){
 
     // Create a kernel that we will use to sharpen our image
     Mat kernel = (Mat_<float>(3,3) <<
-                                   1,  1, 1,
+            1,  1, 1,
             1, -8, 1,
             1,  1, 1);
     // an approximation of second derivative, a quite strong kernel
@@ -431,12 +438,14 @@ Rect getSize(Mat& srcOrig){
     vector<vector<Point> > contours_poly( contours.size() );
     vector<Rect> boundRect( contours.size() );
 
+    int pos = 0;
     //Enclose Rectangle
     for( size_t i = 0; i < contours.size(); i++ ) {
         double area = contourArea(contours[i]);
-        if ( area > 2e3 && area < 2e5) {
+        if ( area > 2e3 && area < 2e4) {
             approxPolyDP(contours[i], contours_poly[i], 3, true);
             boundRect[i] = boundingRect(contours_poly[i]);
+//            pos = i;
         }
     }
 
@@ -445,14 +454,14 @@ Rect getSize(Mat& srcOrig){
 
     dst = dst*0.4 + imgResult*0.6;
 
-    rectangle( dst, boundRect[0].tl(), boundRect[0].br(), Scalar(0, 200,0), 2 );
+    rectangle( dst, boundRect[pos].tl(), boundRect[pos].br(), Scalar(0, 200,0), 2 );
     // Visualize the final image
     Point init = Point(newBox.x, newBox.y);
 
     srcOrig = destMat*0.4 + srcOrig*1.0;
-    rectangle(srcOrig, init + boundRect[0].tl(), init + boundRect[0].br(), Scalar(0, 200,0), 2 );
+    rectangle(srcOrig, init + boundRect[pos].tl(), init + boundRect[pos].br(), Scalar(0, 200,0), 2 );
 
-    return boundRect[0];
+    return boundRect[pos];
 }
 
 void runImage()
@@ -503,28 +512,41 @@ Java_pe_com_e2i_e2iapp_CameraFragment_checkPencil(
     //A new name into C++ space "mRgb" to the Matrix saved in Java which is located in "addrRgba" is assigned.
     Mat& mRgb = *(Mat*)addrRgba;
 
-    Rect testRect = getSize(mLastImage);
+    mTestRect = getSize(mLastImage);
 
-    double wear = getWear(mRefRect, testRect);
+    double wear = getWear(mRefRect, mTestRect);
 
-    char name[10];
-    sprintf (name, "%0.1f%%", wear);
+    if (wear != 0){
+        char name[10];
+        sprintf (name, "%0.1f%%", wear);
 
-    cv::putText(mLastImage,
-                name,
-                cv::Point(mLastImage.cols / 2 - 30, mLastImage.rows / 2 - 250), // Coordinates
-                cv::FONT_HERSHEY_DUPLEX, // Font
-                0.8, // Scale. 2.0 = 2x bigger
-                cv::Scalar(255,255,255), // BGR Color
-                1); // Line Thickness (Optional)
-
+        cv::putText(mLastImage,
+                    name,
+                    cv::Point(mLastImage.cols / 2 - 30, mLastImage.rows / 2 - 250), // Coordinates
+                    cv::FONT_HERSHEY_DUPLEX, // Font
+                    0.8, // Scale. 2.0 = 2x bigger
+                    cv::Scalar(255,255,255), // BGR Color
+                    1); // Line Thickness (Optional)
+    }
     mLastImage.copyTo(mRgb);
-    return 0;
+    return mRefRect.width;
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_pe_com_e2i_e2iapp_CameraFragment_setRefRec(
+        JNIEnv* env,
+        jobject,
+        jint width,
+        jint height)
+{
+    mRefRect.width = width;
+    mRefRect.height = height;
 }
 
 extern "C"
 JNIEXPORT int JNICALL
-Java_pe_com_e2i_e2iapp_CameraFragment_getWidth(
+Java_pe_com_e2i_e2iapp_CameraFragment_getRefWidth(
         JNIEnv* env,
         jobject)
 {
@@ -533,9 +555,27 @@ Java_pe_com_e2i_e2iapp_CameraFragment_getWidth(
 
 extern "C"
 JNIEXPORT int JNICALL
-Java_pe_com_e2i_e2iapp_CameraFragment_getHeight(
+Java_pe_com_e2i_e2iapp_CameraFragment_getRefHeight(
         JNIEnv* env,
         jobject)
 {
     return mRefRect.height;
+}
+
+extern "C"
+JNIEXPORT int JNICALL
+Java_pe_com_e2i_e2iapp_CameraFragment_getTestWidth(
+        JNIEnv* env,
+        jobject)
+{
+    return mTestRect.width;
+}
+
+extern "C"
+JNIEXPORT int JNICALL
+Java_pe_com_e2i_e2iapp_CameraFragment_getTestHeight(
+        JNIEnv* env,
+        jobject)
+{
+    return mTestRect.height;
 }

@@ -1,31 +1,46 @@
-<resources>
+<resources xmlns:xliff="http://schemas.android.com/apk/res-auto">
     <string name="app_name">E2IApp</string>
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="E2I">E2 Innovation SRL - 2019 \u00AE</string>
     <string name="menu">Menu</string>
-    <string name="action_settings">Settings</string>
+    <string name="action_settings">Ajustes</string>
+    <string name="action_about_us">Nosotros</string>
+    <string name="action_share">Share</string>
+
+    <string name="tittle_activity_Ref">Referencia</string>
+    <string name="tittle_activity_Test">Realizar Medición</string>
 
     <!-- Setting Activity -->
-    <string name="title_activity_settings">SettingsActivity</string>
-
-    <string name="pref_currency_label" translatable="false">Currency</string>
-    <string name="pref_currency_key" translatable="false">currency</string>
+    <string name="title_activity_settings">Ajustes</string>
 
     <!-- Strings related to Notification Enabled preference -->
     <string name="pref_enable_notifications_key" translatable="false">enable_notifications</string>
-    <string name="pref_enable_notifications_label">E2IApp Notifications</string>
+    <string name="pref_enable_notifications_label">E2IApp Notificaciones</string>
 
-    <string name="pref_enable_notifications_true">Enabled</string>
-    <string name="pref_enable_notifications_false">Not Enabled</string>
+    <string name="pref_enable_notifications_true">Permitir</string>
+    <string name="pref_enable_notifications_false">No permitir</string>
     <string name="pref_enable_notifications_default" translatable="false">true</string>
 
-    <string name="pref_currency_label_Euro">Euro (\u20AC)</string>
-    <string name="pref_currency_label_Dolar">Dolar (\u0024)</string>
-    <string name="pref_currency_label_Sol">Sol (S/.)</string>
+    <!--<string name="pref_currency_label" translatable="false">Currency</string>-->
+    <!--<string name="pref_currency_key" translatable="false">currency</string>-->
+    <!--<string name="pref_currency_label_Euro">Euro (\u20AC)</string>-->
+    <!--<string name="pref_currency_label_Dolar">Dolar (\u0024)</string>-->
+    <!--<string name="pref_currency_label_Sol">Sol (S/.)</string>-->
+
+    <string name="pref_units_label">Sistema de Medición</string>
+    <string name="pref_units_label_metric">Internacional (mm)</string>
+    <string name="pref_units_label_imperial">Imperial (in)</string>
+    <string name="pref_units_key" translatable="false">units</string>
+    <string name="pref_units_metric" translatable="false">metric</string>
+    <string name="pref_units_imperial" translatable="false">imperial</string>
+
+    <string name="format_measure">h: <xliff:g id="size">%1.0f</xliff:g> <xliff:g id="unit">%2$s</xliff:g></string>
 
     <string name="pref_check">\u2714</string>
     <string name="pref_checkX">\u2717</string>
+
+    <string name="pref_link"><a href="http://www.e2i.com.pe/">www.e2i.com.pe</a></string>
 
 </resources>

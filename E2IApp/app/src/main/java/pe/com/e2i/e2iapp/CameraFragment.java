@@ -7,6 +7,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.SensorManager;
@@ -26,19 +28,28 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.StrictMode;
 import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.view.MenuItemCompat;
+import android.support.v7.widget.ShareActionProvider;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.Surface;
 import android.view.View;
 import android.view.ViewGroup;
 import android.support.v4.app.Fragment;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
@@ -49,7 +60,10 @@ import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -61,11 +75,20 @@ import java.util.Comparator;
 public class CameraFragment extends Fragment {
 
     private static final String TAG = CameraFragment.class.getSimpleName();
+
+    private static final String APP_SHARE_HASHTAG = "#E2IApp";
+
+    private ShareActionProvider mShareActionProvider;
+
     private TextView mTextView;
     private ImageView mImageView;
     private ProgressBar mProgressBar;
     private Button mFlashButton;
     private Button mPhotoButton;
+    private Button mRefreshButton;
+    private EditText mCameraPlainText;
+    private TextView mCameraUnitTextView;
+    private TextView mCameraHTextView;
 
     private Size mPreviewSize; //Size of the preview Image
     private CameraDevice 				mCameraDevice; //The CameraDevice class is a representation of a single camera connected to an Android device
@@ -92,6 +115,14 @@ public class CameraFragment extends Fragment {
     private int m_iCount = 0;
     private int m_iRefWidth = 0;
     private int m_iRefHeight = 0;
+    private int m_iCameraState = 0;
+    private String m_sCurrentName;
+    private Boolean mShowShare = false;
+    private String m_sUnits = " mm";
+    private Boolean m_bIsDataChanged = false;
+
+    private String mMessage;
+    private Bitmap mBitmap;
 
     private Mat 	mRGB; // Decode jpegMat in rgbMat, also it contains the image after JNI (C++ and OpenCV).
     private Boolean mIsProgressBarVisible = false;
@@ -101,13 +132,31 @@ public class CameraFragment extends Fragment {
     /*========================    4   ======================== */
     @Override
     public void onPause() {
-        Log.e(TAG, "onPause");
+        Log.e(TAG, "onPause <----");
         stopBackgroundThread();
         super.onPause();
+
+        if (!m_bIsDataChanged)
+            return;
+
         if (null != mCameraDevice) {
             mCameraDevice.close();
             mCameraDevice = null;
         }
+
+        //Save the Current Option selected
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+        SharedPreferences.Editor editor = prefs.edit();
+
+        String dimFloat = mCameraPlainText.getText().toString();
+        if (dimFloat.matches("")) {
+            editor.putFloat("mPencilDim", 0);
+            return;
+        }
+
+        float f = Float.parseFloat(dimFloat);
+        editor.putFloat("mPencilDim", f);
+        editor.apply();
     }
     /*========================  End 4 ======================== */
 
@@ -164,7 +213,6 @@ public class CameraFragment extends Fragment {
         public void onImageAvailable(ImageReader reader) {
 //            mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile));
 
-
             //Hide ProgressBar
             if(mIsProgressBarVisible){
                 mProgressBar.setVisibility(View.GONE);
@@ -201,7 +249,7 @@ public class CameraFragment extends Fragment {
                 if (mTakeImage){
                     Mat rgb  = new Mat();
                     YUVtoRBG(rgb.getNativeObjAddr(), nv21, image.getWidth(), image.getHeight(), mIsRotated);
-                    save(rgb);
+                    save(rgb, m_sCurrentName);
                     mTakeImage = false;
                 }
 
@@ -238,7 +286,7 @@ public class CameraFragment extends Fragment {
         }
 
         //Save in SD Card!.
-        private void save(Mat imageMat) {
+        private void save(Mat imageMat, String fileName) {
 
             Bitmap imgMap;
             imgMap = Bitmap.createBitmap(imageMat.cols(),
@@ -246,28 +294,47 @@ public class CameraFragment extends Fragment {
                     Bitmap.Config.ARGB_8888);
             Utils.matToBitmap(imageMat, imgMap);
 
-            Log.d(TAG, "Dir:  " + Environment.getExternalStorageDirectory());
+//            Log.d(TAG, "Dir:  " + Environment.getExternalStorageDirectory());
             //File where the image will be saved.
 
-            FileOutputStream outStream = null;
             File sdCard = Environment.getExternalStorageDirectory();
             File dir = new File(sdCard.getAbsolutePath() + "/DCIM/E2IApp");
             dir.mkdirs();
-            String fileName = String.format("%d.jpg", System.currentTimeMillis());
+//            String fileName = String.format("%d.jpg", System.currentTimeMillis());
             File outFile = new File(dir, fileName);
 
-            //Display message
-            CharSequence text = fileName + " saved.";
-            int duration = Toast.LENGTH_SHORT;
-            Toast toast = Toast.makeText(getActivity(), text, duration);
-            toast.setGravity( Gravity.CENTER, 0, 0);
-            toast.show();
+            //Image processed
+            File fileProc = new File(dir, "procRefImage.jpeg");
+
+            if (m_iCameraState == 1){
+                //Display message
+                CharSequence text = "Imagen de Referencia guardada.";
+                int duration = Toast.LENGTH_SHORT;
+                Toast toast = Toast.makeText(getActivity(), text, duration);
+                toast.setGravity( Gravity.CENTER, 0, 0);
+                toast.show();
+            }
 
             try {
-                outStream = new FileOutputStream(outFile);
+
+                if (m_iCameraState == 1) {
+                    FileOutputStream fOut = new FileOutputStream( fileProc );
+                    mBitmap.compress( Bitmap.CompressFormat.JPEG, 100, fOut );
+                    fOut.flush();
+                    fOut.close();
+                }
+
+                fileProc.setReadable(true, false);
+
+                FileOutputStream outStream = new FileOutputStream(outFile);
                 imgMap.compress(Bitmap.CompressFormat.JPEG, 100, outStream);
                 outStream.flush();
                 outStream.close();
+
+                outFile.setReadable(true, false);
+
+                StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
+                StrictMode.setVmPolicy(builder.build());
 
                 //Add the picture to the gallery
                 Intent galleryIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
@@ -278,7 +345,6 @@ public class CameraFragment extends Fragment {
                 e.printStackTrace();
             }
         }
-
     };
 
     static {
@@ -294,6 +360,8 @@ public class CameraFragment extends Fragment {
     }
 
     public CameraFragment()  {
+        //To use Options added in this fragment
+        setHasOptionsMenu(true);
         // Required empty public constructor
         Log.i(TAG, "Instantiated new " + this.getClass());
     }
@@ -305,6 +373,50 @@ public class CameraFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_camera, container, false);
 
         mTextView = (TextView) rootView.findViewById(R.id.camera_textView);
+        mCameraUnitTextView = (TextView) rootView.findViewById(R.id.camera_unit_textView);
+        mCameraHTextView  = (TextView) rootView.findViewById(R.id.camera_h_textView);
+        mCameraPlainText  = (EditText) rootView.findViewById(R.id.camera_plain_text);
+
+        mCameraPlainText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                // TODO Auto-generated method stub
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                // TODO Auto-generated method stub
+                // We still need this for the share intent
+                mMessage = APP_SHARE_HASHTAG + "\n";
+                mMessage += "*Imagen de Referencia*";
+                mMessage += "\n" + "Dimensiones: " + Integer.toString( m_iRefWidth ) + " x " +
+                        Integer.toString( m_iRefHeight ) + " pixeles\n";
+
+                String dimFloat = s.toString();
+                if (!dimFloat.matches("")) {
+                    float f = Float.parseFloat( dimFloat );
+
+                    if (Utility.isMetric(getContext())) {
+                        mMessage += "Este lápiz es de *" + Integer.toString( (int) f ) + m_sUnits + "*.\n";
+                    } else {
+                        mMessage += "Este lápiz es de *" + Float.toString( f ) + m_sUnits + "*.\n";
+                    }
+                }
+                mMessage += "Visitanos en ";
+                mMessage += getResources().getString( R.string.pref_link);
+                mShareActionProvider.setShareIntent(createShareE2IIntent());
+            }
+        });
+
+        mTextView.setVisibility(View.GONE);
+        mCameraUnitTextView.setVisibility(View.GONE);
+        mCameraHTextView.setVisibility(View.GONE);
+        mCameraPlainText.setVisibility(View.GONE);
+
         mImageView = (ImageView)  rootView.findViewById(R.id.test_image);
         mProgressBar = (ProgressBar) rootView.findViewById(R.id.loadingPanel);
 
@@ -327,29 +439,49 @@ public class CameraFragment extends Fragment {
             @Override
             public void onClick(View view) {
                 takePhoto();
-
-                //Save the Current Option selected
-                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
-                SharedPreferences.Editor editor = prefs.edit();
-
-                if (m_iRefWidth != 0 && m_iRefHeight != 0){
-                    editor.putBoolean("eCheck", true);
-                    editor.putInt("refWidth", m_iRefWidth);
-                    editor.putInt("refHeight", m_iRefHeight);
-                } else {
-                    editor.putBoolean("eCheck", false);
-                }
-
-                editor.apply();
+                updatePhotoButton();
             }
         });
 
+        mRefreshButton = (Button) rootView.findViewById(R.id.refresh_button);
+        mRefreshButton.setOnClickListener( new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                updateRefreshButton();
+            }
+        });
+
+        mRefreshButton.setVisibility( View.GONE );
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+        m_iCameraState = prefs.getInt("mCameraState", 0);
+
+        int[] size  = Utility.getSize( getContext() );
+        m_iRefWidth = size[0];
+        m_iRefHeight = size[1];
+
+        if (Utility.isMetric(getContext())) {
+            m_sUnits = " mm";
+            mCameraPlainText.setHint( "0" );
+        } else {
+            m_sUnits = " in";
+            mCameraPlainText.setHint( "0.0" );
+        }
+
+        mGrabbing = true;
+        openCamera();
+//        mTextView.setText( stringFromJNI() );
+
+        String title;
+        if (m_iCameraState == 1)
+            title = getResources().getString(R.string.tittle_activity_Ref);
+        else
+            title = getResources().getString(R.string.tittle_activity_Test);
+
+        getActivity().setTitle(title);
 
         //Display ProgressBar
         mIsProgressBarVisible = true;
-
-        openCamera();
-        mTextView.setText( stringFromJNI() );
 
         Log.e(TAG, "Rotation onCreateView");
 
@@ -357,13 +489,87 @@ public class CameraFragment extends Fragment {
         int currentOrientation = getResources().getConfiguration().orientation;
         if (currentOrientation == Configuration.ORIENTATION_LANDSCAPE) {
             // Landscape
-            mIsRotated = true; //JNI C++
+            mIsRotated = true;
         } else {
             // Portrait
-            mIsRotated = false; //JNI C++
+            mIsRotated = false;
+        }
+
+        switch(m_iCameraState) {
+            case 1:
+                break;
+            case 2:
+                //Load Ref in c++
+                setRefRec(m_iRefWidth, m_iRefHeight);
+                break;
+        }
+
+        if (m_iRefWidth != 0 && m_iRefHeight != 0 && m_iCameraState == 1){
+            String sizePix = "Dimensiones: \n" + Integer.toString( m_iRefWidth ) + " x " +
+                    Integer.toString( m_iRefHeight ) + " pixeles";
+            mTextView.setText(sizePix);
+
+            float dim = prefs.getFloat("mPencilDim", 0);
+            mCameraHTextView.setText(Utility.getFormattedMeasure(getContext(), dim));
+
+            mTextView.setVisibility(View.VISIBLE);
+            if (dim != 0) {
+                mCameraHTextView.setVisibility(View.VISIBLE);
+            } else {
+                mCameraHTextView.setVisibility(View.GONE);
+            }
+
+            mShowShare = true;
+            getActivity().invalidateOptionsMenu();
+            // We still need this for the share intent
+            mMessage = APP_SHARE_HASHTAG + "\n";
+            mMessage += "*Imagen de Referencia*";
+            mMessage += "\n" + "Dimensiones: " + Integer.toString( m_iRefWidth ) + " x " +
+                    Integer.toString( m_iRefHeight ) + " pixeles\n";
+
+            if (dim != 0) {
+                if (Utility.isMetric(getContext())) {
+                    mMessage += "Este lápiz es de *" + Integer.toString( (int) dim ) + m_sUnits + "*.\n";
+                } else {
+                    mMessage += "Este lápiz es de *" + Float.toString( dim ) + m_sUnits + "*.\n";
+                }
+            }
+            mMessage += "Visitanos en ";
+            mMessage += getResources().getString( R.string.pref_link);
+        }
+
+        try {
+            File sdCard = Environment.getExternalStorageDirectory();
+            File dir = new File(sdCard.getAbsolutePath() + "/DCIM/E2IApp");
+            File inFile = new File(dir, "procRefImage.jpeg");
+            Log.e(TAG, "Error--- >" + inFile.getName());  //sending log output. .e : Send a Error Message
+
+            if(inFile.exists() && m_iCameraState == 1){
+                mFlashButton.setVisibility( View.GONE );
+                mPhotoButton.setVisibility( View.GONE );
+                mRefreshButton.setVisibility( View.VISIBLE );
+                mProgressBar.setVisibility(View.GONE);
+                mGrabbing = false;
+                Log.e(TAG, "Error--- > Existe la foto");  //sending log output. .e : Send a Error Message
+
+                Bitmap bmp = BitmapFactory.decodeStream(new FileInputStream(inFile));
+                ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                bmp.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+
+                if (bmp!=null) {
+                    mBitmap = bmp;
+                    mImageView.setImageBitmap(bmp);
+                } else {
+                    Log.d(TAG, "null frame!");
+                }
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            Log.e(TAG, "Error--- >");  //sending log output. .e : Send a Error Message
         }
         return rootView;
     }
+
 
     //Here the Preview Mode is set on the Screen.
     private void openCamera() {
@@ -407,9 +613,9 @@ public class CameraFragment extends Fragment {
 
             boolean Flash = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
             if (Flash){
-                Log.v(TAG, "Flash Available."); //tag:Device to see in Log.Cat
+                Log.v(TAG, "Flash Available.");
             } else {
-                Log.v(TAG, "Flash Disabled.");  //tag:Device to see in Log.Cat
+                Log.v(TAG, "Flash Disabled.");
             }
 
             //Here is asked which  Level of hardware is supported.
@@ -498,8 +704,6 @@ public class CameraFragment extends Fragment {
             Surface mImageSurface = mImageReader.getSurface();
             mPreviewBuilder.addTarget(mImageSurface);
 
-            mGrabbing = true;
-
             // also for preview callbacks
             mCameraDevice.createCaptureSession(Arrays.asList(mImageReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
@@ -547,6 +751,23 @@ public class CameraFragment extends Fragment {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+//        super.onCreateOptionsMenu( menu, inflater );
+        // Inflate the menu; this adds items to the action bar if it is present.
+        inflater.inflate(R.menu.camerafragment, menu);
+
+        MenuItem menuItem = menu.findItem(R.id.action_share);
+        menuItem.setVisible(mShowShare);//
+
+        // Get the provider and hold onto it to set/change the share intent.
+        mShareActionProvider = (ShareActionProvider) MenuItemCompat.getActionProvider(menuItem);
+
+        if (m_iRefWidth != 0 && m_iRefHeight != 0 && m_iCameraState == 1)
+            mShareActionProvider.setShareIntent(createShareE2IIntent());
+
     }
 
     protected void updatePreview() {
@@ -719,14 +940,12 @@ public class CameraFragment extends Fragment {
      * Compares two {@code Size}s based on their areas.
      */
     static class CompareSizesByArea implements Comparator<Size> {
-
         @Override
         public int compare(Size lhs, Size rhs) {
             // We cast here to ensure the multiplications won't overflow
             return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
                     (long) rhs.getWidth() * rhs.getHeight());
         }
-
     }
 
     /**
@@ -771,9 +990,13 @@ public class CameraFragment extends Fragment {
 
         if (imgMap!=null) {
             mImageView.setImageBitmap(imgMap);
-        }else{
+        } else {
             Log.d(TAG, "null frame!");
         }
+
+        //Use only processed Image
+        if (!mGrabbing)
+            mBitmap = imgMap;
     }
 
     private void setFlash(boolean value){
@@ -793,41 +1016,257 @@ public class CameraFragment extends Fragment {
 
     private void takePhoto(){
         Log.d(TAG, "take photo!");
-        //mTakeImage = true;
-        //mImageReader.close();
-        if (mRefImage == 0){
-            m_bDisplayRef = true;
-            Mat rgb  = new Mat();
-            getRef(rgb.getNativeObjAddr());
-            ShowImage(rgb);
+        Mat rgb = new Mat();
+        switch(m_iCameraState) {
+            case 1:
+                mGrabbing = false;
+//            m_bDisplayRef = true;
+                getRef(rgb.getNativeObjAddr());
 
-            m_iRefWidth = getWidth();
-            m_iRefHeight = getHeight();
+                m_iRefWidth = getRefWidth();
+                m_iRefHeight = getRefHeight();
 
-            //Display message
-            CharSequence text = "Reference has been taken.";
-            int duration = Toast.LENGTH_SHORT;
-            Toast toast = Toast.makeText(getActivity(), text, duration);
-            toast.setGravity( Gravity.CENTER, 0, 0);
-            toast.show();
+                m_bIsDataChanged = true;
+                break;
+            case 2:
+                mGrabbing = false;
+                int val = checkPencil(rgb.getNativeObjAddr());
+                Log.d(TAG, "take photo! --" + Integer.toString(val));
+                break;
         }
 
-        if (mRefImage == 1){
-            //mImageReader.close();
-            //mCameraDevice.close();
-            //closeCamera();
-            mGrabbing = false;
-            Mat image  = new Mat();
-            checkPencil(image.getNativeObjAddr());
-            ShowImage(image);
+
+        ShowImage(rgb);
+    }
+
+    private void updatePhotoButton() {
+        // We still need this for the share intent
+        mMessage = APP_SHARE_HASHTAG + "\n";
+        //Save the Current Option selected
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+        switch(m_iCameraState) {
+            case 1:
+                SharedPreferences.Editor editor = prefs.edit();
+
+                if (m_iRefWidth != 0 && m_iRefHeight != 0){
+                    mShowShare = true;
+                    getActivity().invalidateOptionsMenu();
+
+                    editor.putBoolean("eCheck", true);
+                    editor.putInt("refWidth", m_iRefWidth);
+                    editor.putInt("refHeight", m_iRefHeight);
+                    mTextView.setVisibility(View.VISIBLE);
+                    mCameraUnitTextView.setVisibility(View.VISIBLE);
+                    mCameraUnitTextView.setText(m_sUnits);
+                    mCameraHTextView.setVisibility(View.VISIBLE);
+                    mCameraPlainText.setVisibility(View.VISIBLE);
+
+                    mCameraHTextView.setText( "h: " );
+
+                    String sizePix = "Dimensiones: \n" + Integer.toString( m_iRefWidth ) + " x " +
+                            Integer.toString( m_iRefHeight ) + " pixeles";
+                    mTextView.setText(sizePix);
+
+                    mFlashButton.setVisibility( View.GONE );
+                    mPhotoButton.setVisibility( View.GONE );
+                    mRefreshButton.setVisibility( View.VISIBLE );
+
+                    //Save Image
+                    m_sCurrentName = "RefImage.jpg";
+                    mTakeImage = true;
+
+                    mMessage += "*Imagen de Referencia*";
+                    mMessage += "\n" + "Dimensiones: " + Integer.toString( m_iRefWidth ) + " x " +
+                            Integer.toString( m_iRefHeight ) + " pixeles\n";
+
+                    String dimFloat = mCameraPlainText.getText().toString();
+                    if (!dimFloat.matches("")) {
+                        float f = Float.parseFloat( dimFloat );
+                        if (Utility.isMetric(getContext())) {
+                            mMessage += "Este lápiz es de *" + Integer.toString( (int) f ) + m_sUnits + "*.\n";
+                        } else {
+                            mMessage += "Este lápiz es de *" + Float.toString( f ) + m_sUnits + "*.\n";
+                        }
+                    }
+
+                } else {
+                    editor.putBoolean("eCheck", false);
+                    mTextView.setVisibility(View.GONE);
+                    mCameraUnitTextView.setVisibility(View.GONE);
+                    mCameraHTextView.setVisibility(View.GONE);
+                    mCameraPlainText.setVisibility(View.GONE);
+
+                    //Display message
+                    CharSequence text = "No se ha encontrado un lápiz.\n    Debe tomar otra imagen.";
+                    int duration = Toast.LENGTH_LONG;
+                    Toast toast = Toast.makeText(getActivity(), text, duration);
+                    toast.setGravity( Gravity.CENTER, 0, 0);
+                    toast.show();
+
+                    //Restart Grabbing
+                    m_bDisplayRef = true;
+                    mGrabbing = true;
+                }
+                editor.apply();
+                break;
+            case 2:
+                int width = getTestWidth();
+                int height = getTestHeight();
+                if (width != 0 && height != 0) {
+                    mShowShare = true;
+                    getActivity().invalidateOptionsMenu();
+                    String sizePix = "Dimensiones: \n" + Integer.toString( width ) + " x " +
+                            Integer.toString( height ) + " pixeles";
+                    mTextView.setText(sizePix);
+
+                    float dimRef = prefs.getFloat("mPencilDim", 0);
+                    float factor = (float) m_iRefWidth/ (float) width;
+                    float dim = factor*(float)height*dimRef/ (float)m_iRefHeight;
+
+                    dim = dim > dimRef? dimRef:dim;
+                    mCameraHTextView.setText(Utility.getFormattedMeasure(getContext(), dim));
+
+                    mTextView.setVisibility(View.VISIBLE);
+                    if (dimRef != 0) {
+                        mCameraHTextView.setVisibility(View.VISIBLE);
+                    } else {
+                        mCameraHTextView.setVisibility(View.GONE);
+                    }
+
+                    mFlashButton.setVisibility( View.GONE );
+                    mPhotoButton.setVisibility( View.GONE );
+                    mRefreshButton.setVisibility( View.VISIBLE );
+
+                    //Save Image
+                    m_sCurrentName = "TestImage.jpg";
+                    mTakeImage = true;
+
+                    mMessage += "*Medición Actual*";
+                    mMessage += "\n" + "Dimensiones: " + Integer.toString( width ) + " x " +
+                            Integer.toString( height ) + " pixeles\n";
+
+                    if (dim != 0) {
+                        if (Utility.isMetric(getContext())) {
+                            mMessage += "Este lápiz es de aproximádamente *" + Integer.toString( (int) dim ) + m_sUnits + "*.\n";
+                        } else {
+                            mMessage += "Este lápiz es de aproximádamente *" + Float.toString( dim ) + m_sUnits + "*.\n";
+                        }
+                    }
+                } else {
+                    mTextView.setVisibility(View.GONE);
+                    mCameraUnitTextView.setVisibility(View.GONE);
+                    mCameraHTextView.setVisibility(View.GONE);
+                    mCameraPlainText.setVisibility(View.GONE);
+
+                    //Display message
+                    CharSequence text = "No se ha encontrado ningún lápiz.";
+                    int duration = Toast.LENGTH_LONG;
+                    Toast toast = Toast.makeText(getActivity(), text, duration);
+                    toast.setGravity( Gravity.CENTER, 0, 0);
+                    toast.show();
+
+                    //Restart Grabbing
+                    m_bDisplayRef = true;
+                    mGrabbing = true;
+                }
+                break;
         }
 
-        if (mRefImage >= 2){
-            mGrabbing = true;
-            mRefImage = -1;
+        mMessage += "Visitanos en ";
+        mMessage += getResources().getString( R.string.pref_link);
+        mShareActionProvider.setShareIntent(createShareE2IIntent());
+    }
+
+    private void updateRefreshButton() {
+        mShowShare = false;
+        getActivity().invalidateOptionsMenu();
+
+        switch(m_iCameraState) {
+            case 1:
+                mFlashButton.setVisibility( View.VISIBLE );
+                mPhotoButton.setVisibility( View.VISIBLE );
+                mRefreshButton.setVisibility( View.GONE );
+                mGrabbing = true;
+                m_iRefWidth = 0;
+                m_iRefHeight = 0;
+                //Save the Current Option selected
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+                SharedPreferences.Editor editor = prefs.edit();
+
+                editor.putBoolean("eCheck", false);
+                mTextView.setVisibility(View.GONE);
+                mCameraUnitTextView.setVisibility(View.GONE);
+                mCameraHTextView.setVisibility(View.GONE);
+                mCameraPlainText.setVisibility(View.GONE);
+                editor.apply();
+
+                File sdCard = Environment.getExternalStorageDirectory();
+                File dir = new File(sdCard.getAbsolutePath() + "/DCIM/E2IApp");
+                //Image processed
+                File fileProc = new File(dir, "procRefImage.jpeg");
+                fileProc.delete();
+
+                getContext().deleteFile( "E2Iconfig.txt" );
+                break;
+            case 2:
+                mFlashButton.setVisibility( View.VISIBLE );
+                mPhotoButton.setVisibility( View.VISIBLE );
+                mRefreshButton.setVisibility( View.GONE );
+                mGrabbing = true;
+                mTextView.setVisibility(View.GONE);
+                mCameraUnitTextView.setVisibility(View.GONE);
+                mCameraHTextView.setVisibility(View.GONE);
+                break;
+        }
+    }
+
+    private Intent createShareE2IIntent(){
+
+        if (mBitmap == null){
+            Log.d(TAG, "mBitmap null frame!");
+            return null;
         }
 
-        mRefImage++;
+        //Add Logo
+        Bitmap result = Bitmap.createBitmap(mBitmap.getWidth(), mBitmap.getHeight(), mBitmap.getConfig());
+        Canvas canvas = new Canvas(result);
+
+        Bitmap logo = BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher_round);
+
+        float aspectRatio = logo.getWidth() /
+                (float) logo.getHeight();
+        int width = 180;
+        int height = Math.round(width / aspectRatio);
+
+        Bitmap b = Bitmap.createScaledBitmap(logo, width, height, false);
+        canvas.drawBitmap(mBitmap, 0f, 0f, null);
+        canvas.drawBitmap(logo, 10f, 40f, null);
+
+        try {
+//            File sdCard = Environment.getExternalStorageDirectory();
+//            File dir = new File(sdCard.getAbsolutePath() + "/DCIM/E2IApp");
+//            File file = new File(dir, m_sCurrentName);
+
+            File file = new File(getContext().getExternalCacheDir(), "procImage.jpeg");
+            FileOutputStream fOut = new FileOutputStream(file);
+            result.compress(Bitmap.CompressFormat.JPEG, 100, fOut);
+            fOut.flush();
+            fOut.close();
+            file.setReadable(true, false);
+
+            StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
+            StrictMode.setVmPolicy(builder.build());
+
+            final Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            shareIntent.putExtra(Intent.EXTRA_TEXT, mMessage);
+            shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
+            shareIntent.setType("image/jpeg");
+            return shareIntent;
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+        return null;
     }
 
     /**
@@ -848,9 +1287,14 @@ public class CameraFragment extends Fragment {
 
     public native int checkPencil(long matAddrRgba);
 
-    public native int getWidth();
+    public native void setRefRec(int width, int height);
 
-    public native int getHeight();
+    public native int getRefWidth();
+
+    public native int getRefHeight();
+
+    public native int getTestWidth();
+
+    public native int getTestHeight();
     /*=====================   JNI Part ======================= */
-
 }

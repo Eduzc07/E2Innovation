@@ -31,34 +31,75 @@
         android:gravity="center"
         android:layout_centerHorizontal="true"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="55dp"
+        android:layout_marginBottom="10dp"
         android:orientation="horizontal">
 
         <Button
             android:id="@+id/flash_button"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
-            android:layout_marginEnd="40dp"
-            android:background="@drawable/button_image_flash"
-            android:textSize="25sp" />
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="@drawable/button_image_flash"/>
 
         <Button
             android:id="@+id/takePhoto_button"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
-            android:background="@drawable/button_camera"
-            android:textSize="25sp" />
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_marginStart="40dp"
+            android:background="@drawable/button_camera"/>
+
+        <Button
+            android:id="@+id/refresh_button"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:background="@drawable/button_refresh"/>
 
     </LinearLayout>
 
-
-
     <TextView
         android:id="@+id/camera_textView"
-        android:gravity="center"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="60dp"
+        android:layout_marginStart="10dp"
         android:textColor="@color/white"
         android:text="@string/hello_blank_fragment" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/camera_textView"
+        android:layout_marginStart="10dp"
+        android:orientation="horizontal">
+        <TextView
+            android:id="@+id/camera_h_textView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:text="h: " />
+
+        <EditText
+            android:id="@+id/camera_plain_text"
+            android:layout_height="wrap_content"
+            android:layout_width="40dp"
+            android:textSize="15dp"
+            android:hint="0"
+            android:gravity="end"
+            android:textColorHint="@android:color/darker_gray"
+            android:backgroundTint="@android:color/holo_blue_dark"
+            android:maxLength="3"
+            android:textColor="@color/white"
+            android:singleLine="true"
+            android:digits="0123456789.\n"
+            android:inputType="numberDecimal"/>
+
+        <TextView
+            android:id="@+id/camera_unit_textView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/white"
+            android:text="mm" />
+
+    </LinearLayout>
 
 </RelativeLayout>

@@ -6,6 +6,7 @@ import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
 //import android.app.Fragment;
+import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -16,6 +17,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
+
+import java.io.File;
 
 public class MainFragment extends Fragment {
 
@@ -98,8 +101,8 @@ public class MainFragment extends Fragment {
             mCameraButton.setEnabled(false);
         }
 
-        int refWidth = prefs.getInt("refWidth", -1);
-        int refHeight = prefs.getInt("refHeight", -1);
+        int refWidth = prefs.getInt("refWidth", 0);
+        int refHeight = prefs.getInt("refHeight", 0);
 
         Log.v(LOG_TAG, ">> refWidth << " + Integer.toString(refWidth) );
         Log.v(LOG_TAG, ">> refHeight << " + Integer.toString(refHeight) );
@@ -121,6 +124,11 @@ public class MainFragment extends Fragment {
         mReferenceImageButton.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putInt("mCameraState", 1); //Camera State
+                editor.apply();
+
                 ((Callback) getActivity()).onViewCamera();
             }
         });
@@ -129,26 +137,19 @@ public class MainFragment extends Fragment {
         mCameraButton.setOnClickListener( new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putInt("mCameraState", 2); //Camera State
+                editor.apply();
+
                 ((Callback) getActivity()).onViewCamera();
             }
         });
-        mCameraButton.setEnabled(false);
 
         Log.v(LOG_TAG, ">> onCreateView << ");
 
         mTextViewCheck = (TextView) rootView.findViewById(R.id.main_text_check);
         mTextViewCheckX = (TextView) rootView.findViewById(R.id.main_text_checkX);
-
-        //Create share boolean
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
-        SharedPreferences.Editor editor = prefs.edit();
-        editor.putBoolean("eCheck", false);
-        editor.putInt("refWidth", 0);
-        editor.putInt("refHeight", 0);
-        editor.apply();
-
-        mTextViewCheck.setVisibility(View.GONE);
-        mTextViewCheckX.setVisibility(View.VISIBLE);
 
         // Inflate the layout for this fragment
         return rootView;

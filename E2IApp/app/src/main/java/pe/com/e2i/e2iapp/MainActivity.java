@@ -1,6 +1,9 @@
 package pe.com.e2i.e2iapp;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -9,6 +12,8 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.WindowManager;
 
+import java.io.File;
+
 public class MainActivity extends AppCompatActivity implements MainFragment.Callback {
 
     private final String LOG_TAG = MainActivity.class.getSimpleName();
@@ -16,6 +21,35 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Call
 //    static {
 //        System.loadLibrary( "native-lib" );
 //    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        Log.v(LOG_TAG, "---->> onStop <<---- ");
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        int width = prefs.getInt("refWidth", 0);
+        int height = prefs.getInt("refHeight", 0);
+        float penDim =  prefs.getFloat("mPencilDim", 0);
+
+        Log.v(LOG_TAG, "---->> width <<---- " + width);
+        Log.v(LOG_TAG, "---->> height <<---- " + height);
+        Log.v(LOG_TAG, "---->> pencilDim <<---- " + penDim);
+
+        String data = Integer.toString( width );
+        data += ";" + Integer.toString( height );
+        if(penDim!=0) {
+            data += ";" + penDim;
+            if (Utility.isMetric( getApplicationContext() ))
+                data += ";mm";
+            else
+                data += ";in";
+        }else{
+            data += ";0;0";
+        }
+
+        Utility.writeToFile(data , getApplicationContext() );
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +77,39 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Call
         // Example of a call to a native method
 //        TextView tv = (TextView) findViewById( R.id.sample_text );
 //        tv.setText( stringFromJNI() );
+
+        String readFile = Utility.readFromFile( getApplicationContext() );
+
+        if (readFile.matches("")) {
+            readFile = "0;0;0;0";
+        }
+
+        String[] parts = readFile.split(";");
+        int width = Integer.parseInt(parts[0]);
+        int height = Integer.parseInt(parts[1]);
+        float pencilDim = Float.parseFloat(parts[2]);
+
+        File sdCard = Environment.getExternalStorageDirectory();
+        File dir = new File(sdCard.getAbsolutePath() + "/DCIM/E2IApp");
+        File inFile = new File(dir, "procRefImage.jpeg");
+
+        Log.v(LOG_TAG, "---->> width <<---- " + parts[0]);
+        Log.v(LOG_TAG, "---->> height <<---- " + parts[1]);
+        Log.v(LOG_TAG, "---->> pencilDim <<---- " + parts[2]);
+
+        Boolean bCheck = false;
+        if(inFile.exists() && width != 0 && height != 0)
+            bCheck = true;
+
+        //Create share boolean
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        SharedPreferences.Editor editor = prefs.edit();
+        editor.putBoolean("eCheck", bCheck);
+        editor.putInt("refWidth", width);
+        editor.putInt("refHeight", height);
+        editor.putInt("mCameraState", 0);
+        editor.putFloat("mPencilDim", pencilDim);
+        editor.apply();
 
     }
 

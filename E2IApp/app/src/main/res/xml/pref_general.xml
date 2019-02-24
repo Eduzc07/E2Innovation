@@ -3,10 +3,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <ListPreference android:title="@string/pref_currency_label"
-        android:key="@string/pref_currency_key"
-        android:entryValues="@array/pref_currency_values"
-        android:entries="@array/pref_currency_options" />
+    <!--<ListPreference android:title="@string/pref_currency_label"-->
+        <!--android:key="@string/pref_currency_key"-->
+        <!--android:entryValues="@array/pref_currency_values"-->
+        <!--android:entries="@array/pref_currency_options" />-->
+
+    <ListPreference android:title="@string/pref_units_label"
+        android:key="@string/pref_units_key"
+        android:entryValues="@array/pref_units_values"
+        android:entries="@array/pref_units_options" />
 
     <CheckBoxPreference
         android:title="@string/pref_enable_notifications_label"

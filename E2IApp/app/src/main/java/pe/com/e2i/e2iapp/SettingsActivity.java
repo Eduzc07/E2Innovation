@@ -33,8 +33,7 @@ public class SettingsActivity extends PreferenceActivity
             // For all preferences, attach an OnPreferenceChangeListener so the UI summary can be
             // updated when the preference changes.
 
-            ListPreference prefs = (ListPreference) findPreference (getString(R.string.pref_currency_key));
-            prefs.setValue(getString(R.string.pref_currency_label_Euro));
+            ListPreference prefs = (ListPreference) findPreference (getString(R.string.pref_units_key));
             SettingsActivity m = new SettingsActivity();
             m.bindPreferenceSummaryToValue(prefs);
         }
