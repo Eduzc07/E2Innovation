@@ -67,12 +67,12 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Call
         }
 
         //Set Brightness
-        WindowManager.LayoutParams lp = getWindow().getAttributes();
-        //Increasing Brightness while the App is running.
-        //float brightness=WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
-        float brightness=0.8f;
-        lp.screenBrightness = brightness;
-        getWindow().setAttributes(lp);
+//        WindowManager.LayoutParams lp = getWindow().getAttributes();
+//        //Increasing Brightness while the App is running.
+//        //float brightness=WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
+//        float brightness=0.8f;
+//        lp.screenBrightness = brightness;
+//        getWindow().setAttributes(lp);
 
         // Example of a call to a native method
 //        TextView tv = (TextView) findViewById( R.id.sample_text );
@@ -110,7 +110,6 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Call
         editor.putInt("mCameraState", 0);
         editor.putFloat("mPencilDim", pencilDim);
         editor.apply();
-
     }
 
     @Override
@@ -130,6 +129,13 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Call
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
             Intent intent = new Intent(this, SettingsActivity.class);
+            startActivity(intent);
+            return true;
+        }
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_about_us) {
+            Intent intent = new Intent(this, AboutUsActivity.class);
             startActivity(intent);
             return true;
         }

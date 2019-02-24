@@ -22,8 +22,8 @@
 
     <!-- main activity action bar styles -->
     <!--<style name="ActionBar.Solid.E2IApp.NoTitle" parent="@style/Widget.AppCompat.Light.ActionBar.Solid.Inverse">-->
-        <!--<item name="displayOptions">useLogo|showHome</item>-->
-        <!--<item name="logo">@drawable/ic_logo</item>-->
+    <!--<item name="displayOptions">useLogo|showHome</item>-->
+    <!--<item name="logo">@drawable/ic_logo</item>-->
     <!--</style>-->
 
     <!-- Settings activity theme. -->
@@ -33,7 +33,7 @@
     </style>
 
     <!-- Camera activity theme. -->
-    <style name="CameraTheme" parent="@style/Theme.AppCompat.DayNight.NoActionBar.FullScreen"/>
+    <style name="CameraTheme" parent="@style/Theme.AppCompat.DayNight.NoActionBar.FullScreen" />
 
     <!-- Camera activity theme. -->
     <style name="Theme.AppCompat.DayNight.NoActionBar.FullScreen" parent="@style/Theme.AppCompat.DayNight.NoActionBar">
@@ -45,6 +45,18 @@
         <!--<item name="android:background">@color/black</item>-->
         <!--<item name="android:windowBackground">@color/black</item>-->
         <!--<item name="android:colorBackground">@color/black</item>-->
+    </style>
+
+    <style name="FullscreenTheme" parent="AppTheme">
+        <item name="android:actionBarStyle">@style/FullscreenActionBarStyle</item>
+        <item name="android:windowActionBarOverlay">true</item>
+        <item name="android:windowBackground">@null</item>
+        <item name="metaButtonBarStyle">?android:attr/buttonBarStyle</item>
+        <item name="metaButtonBarButtonStyle">?android:attr/buttonBarButtonStyle</item>
+    </style>
+
+    <style name="FullscreenActionBarStyle" parent="android:Widget.Holo.ActionBar">
+        <item name="android:background">@color/black_overlay</item>
     </style>
 
 

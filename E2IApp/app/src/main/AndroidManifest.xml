@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
     <uses-feature android:name="android.hardware.camera2.full" />
 
     <application
@@ -14,19 +15,22 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
         <activity
             android:name=".MainActivity"
+            android:screenOrientation="portrait"
             android:theme="@style/MainTheme">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity
             android:name=".CameraActivity"
+            android:screenOrientation="portrait"
             android:parentActivityName=".MainActivity">
-            <!--android:theme="@style/CameraTheme"-->
+
+            <!-- android:theme="@style/CameraTheme" -->
 
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
@@ -35,9 +39,23 @@
         <activity
             android:name=".SettingsActivity"
             android:label="@string/title_activity_settings"
+            android:screenOrientation="portrait"
             android:parentActivityName=".MainActivity"
             android:theme="@style/SettingsTheme">
-            <!--android:theme="@style/AppTheme.NoActionBar">-->
+
+            <!-- android:theme="@style/AppTheme.NoActionBar"> -->
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="pe.com.e2i.e2iapp.MainActivity" />
+        </activity>
+
+        <activity
+            android:name=".AboutUsActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:screenOrientation="portrait"
+            android:label="@string/title_activity_about_us"
+            android:theme="@style/FullscreenTheme">
+
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value="pe.com.e2i.e2iapp.MainActivity" />

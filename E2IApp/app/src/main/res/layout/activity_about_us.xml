@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".AboutUsActivity">
+
+    <!--Background-->
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0.9"
+        android:src="@drawable/wallpaper_red_0"
+        android:scaleType="centerCrop" />
+
+    <!-- The primary full-screen view. This can be replaced with whatever view
+         is needed to present your content, e.g. VideoView, SurfaceView,
+         TextureView, etc. -->
+    <LinearLayout
+        android:id="@+id/fullscreen_content"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:keepScreenOn="true"
+        tools:ignore="UselessParent">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="@string/def_about_us_tittle"
+            android:textColor="@color/colorAccent"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="@string/def_about_us_version"
+            android:textColor="@color/grey"
+            android:textSize="16sp" />
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="150dp"
+            android:layout_gravity="center"
+            android:layout_margin="30dp"
+            android:src="@drawable/logo_final"
+            android:adjustViewBounds="true"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="@string/def_about_us_rights"
+            android:textColor="@color/grey"
+            android:textSize="16sp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="50dp"
+            android:gravity="center"
+            android:text="@string/def_about_us_link"
+            android:textColor="@color/grey"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:autoLink="web"/>
+
+    </LinearLayout>
+
+    <!-- This FrameLayout insets its children based on system windows using
+         android:fitsSystemWindows. -->
+    <!--<FrameLayout-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="match_parent"-->
+        <!--android:fitsSystemWindows="true">-->
+
+        <!--<LinearLayout-->
+            <!--android:id="@+id/fullscreen_content_controls"-->
+            <!--style="?metaButtonBarStyle"-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="wrap_content"-->
+            <!--android:layout_gravity="bottom|center_horizontal"-->
+            <!--android:background="@color/black_overlay"-->
+            <!--android:orientation="horizontal"-->
+            <!--android:visibility="invisible"-->
+            <!--tools:ignore="UselessParent">-->
+
+            <!--<Button-->
+                <!--android:id="@+id/dummy_button"-->
+                <!--style="?metaButtonBarButtonStyle"-->
+                <!--android:layout_width="0dp"-->
+                <!--android:layout_height="wrap_content"-->
+                <!--android:layout_weight="1"-->
+                <!--android:text="@string/def_about_us_tittle" />-->
+
+        <!--</LinearLayout>-->
+    <!--</FrameLayout>-->
+
+</FrameLayout>
+

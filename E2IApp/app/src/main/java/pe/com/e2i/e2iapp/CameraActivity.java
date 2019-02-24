@@ -32,13 +32,13 @@ public class CameraActivity extends AppCompatActivity {
                     .commit();
         }
 
-//        //Set Brightness
-//        WindowManager.LayoutParams lp = getWindow().getAttributes();
-//        //Increasing Brightness while the App is running.
-//        //float brightness=WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
-//        float brightness=0.9f;
-//        lp.screenBrightness = brightness;
-//        getWindow().setAttributes(lp);
+        //Set Brightness
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        //Increasing Brightness while the App is running.
+        //float brightness=WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_FULL;
+        float brightness=0.9f;
+        lp.screenBrightness = brightness;
+        getWindow().setAttributes(lp);
 
         //Keep the Screen On
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);

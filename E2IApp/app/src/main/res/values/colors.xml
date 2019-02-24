@@ -9,4 +9,6 @@
     <color name="colorPrimary">#d70000</color>
     <color name="colorPrimaryDark">#ad0308</color>
     <color name="colorAccent">#f6e5e6</color>
+
+    <color name="black_overlay">#66000000</color>
 </resources>

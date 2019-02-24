@@ -4,9 +4,9 @@
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="E2I">E2 Innovation SRL - 2019 \u00AE</string>
-    <string name="menu">Menu</string>
+    <string name="menu">Menú</string>
     <string name="action_settings">Ajustes</string>
-    <string name="action_about_us">Nosotros</string>
+    <string name="action_about_us">Sobre nosotros</string>
     <string name="action_share">Share</string>
 
     <string name="tittle_activity_Ref">Referencia</string>
@@ -42,5 +42,12 @@
     <string name="pref_checkX">\u2717</string>
 
     <string name="pref_link"><a href="http://www.e2i.com.pe/">www.e2i.com.pe</a></string>
+
+    <string name="title_activity_about_us">AboutUsActivity</string>
+
+    <string name="def_about_us_tittle">E2 Innovation App </string>
+    <string name="def_about_us_version">Versión 1.0</string>
+    <string name="def_about_us_rights">\u00A9 2016-2019 E2 Innovation S.R.L.\nTodos los derechos reservados.</string>
+    <string name="def_about_us_link">Visitanos en:\n<a href="http://www.e2i.com.pe/">www.e2i.com.pe</a></string>
 
 </resources>

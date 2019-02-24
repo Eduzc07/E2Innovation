@@ -1181,6 +1181,8 @@ public class CameraFragment extends Fragment {
         mShowShare = false;
         getActivity().invalidateOptionsMenu();
 
+
+
         switch(m_iCameraState) {
             case 1:
                 mFlashButton.setVisibility( View.VISIBLE );
