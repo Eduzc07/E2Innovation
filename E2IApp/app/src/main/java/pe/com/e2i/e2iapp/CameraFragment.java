@@ -504,7 +504,11 @@ public class CameraFragment extends Fragment {
                 break;
         }
 
-        if (m_iRefWidth != 0 && m_iRefHeight != 0 && m_iCameraState == 1){
+        File sdCard = Environment.getExternalStorageDirectory();
+        File dir = new File(sdCard.getAbsolutePath() + "/DCIM/E2IApp");
+        File inFile = new File(dir, "procRefImage.jpeg");
+
+        if (inFile.exists() && m_iRefWidth != 0 && m_iRefHeight != 0 && m_iCameraState == 1){
             String sizePix = "Dimensiones: \n" + Integer.toString( m_iRefWidth ) + " x " +
                     Integer.toString( m_iRefHeight ) + " pixeles";
             mTextView.setText(sizePix);
@@ -539,18 +543,12 @@ public class CameraFragment extends Fragment {
         }
 
         try {
-            File sdCard = Environment.getExternalStorageDirectory();
-            File dir = new File(sdCard.getAbsolutePath() + "/DCIM/E2IApp");
-            File inFile = new File(dir, "procRefImage.jpeg");
-            Log.e(TAG, "Error--- >" + inFile.getName());  //sending log output. .e : Send a Error Message
-
             if(inFile.exists() && m_iCameraState == 1){
                 mFlashButton.setVisibility( View.GONE );
                 mPhotoButton.setVisibility( View.GONE );
                 mRefreshButton.setVisibility( View.VISIBLE );
                 mProgressBar.setVisibility(View.GONE);
                 mGrabbing = false;
-                Log.e(TAG, "Error--- > Existe la foto");  //sending log output. .e : Send a Error Message
 
                 Bitmap bmp = BitmapFactory.decodeStream(new FileInputStream(inFile));
                 ByteArrayOutputStream stream = new ByteArrayOutputStream();
@@ -569,7 +567,6 @@ public class CameraFragment extends Fragment {
         }
         return rootView;
     }
-
 
     //Here the Preview Mode is set on the Screen.
     private void openCamera() {
