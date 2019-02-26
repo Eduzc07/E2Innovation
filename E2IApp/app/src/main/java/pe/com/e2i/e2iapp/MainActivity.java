@@ -12,15 +12,25 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.WindowManager;
 
+import org.opencv.android.OpenCVLoader;
+
 import java.io.File;
 
 public class MainActivity extends AppCompatActivity implements MainFragment.Callback {
 
-    private final String LOG_TAG = MainActivity.class.getSimpleName();
+    private static final String LOG_TAG = MainActivity.class.getSimpleName();
     // Used to load the 'native-lib' library on application startup.
 //    static {
 //        System.loadLibrary( "native-lib" );
 //    }
+
+    static {
+       if(!OpenCVLoader.initDebug()){
+           Log.v(LOG_TAG, "---->> Opencv not loaded <<---- ");
+       }else{
+           Log.v(LOG_TAG, "---->> Opencv loaded <<---- ");
+       }
+    }
 
     @Override
     protected void onStop() {

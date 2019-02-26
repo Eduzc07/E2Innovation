@@ -19,7 +19,7 @@ add_library( # Sets the name of the library.
              # Provides a relative path to your source file(s).
              src/main/cpp/native-lib.cpp )
 
-set(OpenCV_DIR "/home/edu/Softwares/OpenCV-3.4.3-android-sdk/sdk/native/jni")
+set(OpenCV_DIR "/home/edu/Softwares/OpenCV-3.4.5-android-sdk/sdk/native/jni")
 find_package(OpenCV REQUIRED)
 message(STATUS "OpenCV libraries: ${OpenCV_LIBS}")
 

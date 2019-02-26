@@ -16,6 +16,7 @@ public class CameraActivity extends AppCompatActivity {
 
     private static final int REQUEST_CAMERA_RESULT = 200;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate( savedInstanceState );
