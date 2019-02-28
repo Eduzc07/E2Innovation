@@ -27,6 +27,7 @@
         </activity>
         <activity
             android:name=".CameraActivity"
+            android:label="@string/tittle_activity_Ref"
             android:screenOrientation="portrait"
             android:parentActivityName=".MainActivity">
 

@@ -89,7 +89,8 @@ public class MainFragment extends Fragment {
         super.onResume();
         Log.v(LOG_TAG, ">> onResume << ");
 
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getActivity());
         Boolean enableCheck = prefs.getBoolean("eCheck", false);
         if (enableCheck) {
             mTextViewCheck.setVisibility( View.VISIBLE );

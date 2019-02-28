@@ -3,5 +3,6 @@
     android:id="@+id/camera_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/black"
     tools:context="pe.com.e2i.e2iapp.CameraActivity">
 </FrameLayout>

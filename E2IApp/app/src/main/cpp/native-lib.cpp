@@ -343,7 +343,7 @@ double getWear(Rect refSize, Rect testSize)
 Rect getSize(Mat& srcOrig){
 
     //Pre ROI
-    Rect newBox = Rect(srcOrig.cols / 2 - 60, srcOrig.rows / 2 - 280, 120, 560);
+    Rect newBox = Rect(srcOrig.cols / 2 - 40, srcOrig.rows / 2 - 280, 80, 560);
     Mat image_roi = srcOrig.clone()(newBox);
 
     Mat src;
@@ -399,8 +399,8 @@ Rect getSize(Mat& srcOrig){
     }
 
     // Draw the background marker
-    Rect boxWater = Rect(20, 20, 80, 520);
-    rectangle( markers, boxWater.tl(), boxWater.br(), Scalar(255), 3 );
+    Rect boxWater = Rect(10, 20, 60, 520);
+    rectangle( markers, boxWater.tl(), boxWater.br(), Scalar(255), 2 );
 
     Mat newMat;
     markers.convertTo(newMat, CV_8U);
@@ -442,10 +442,10 @@ Rect getSize(Mat& srcOrig){
     //Enclose Rectangle
     for( size_t i = 0; i < contours.size(); i++ ) {
         double area = contourArea(contours[i]);
-        if ( area > 2e3 && area < 2e4) {
+        if ( area > 2e3) {
             approxPolyDP(contours[i], contours_poly[i], 3, true);
             boundRect[i] = boundingRect(contours_poly[i]);
-//            pos = i;
+            pos = i;
         }
     }
 

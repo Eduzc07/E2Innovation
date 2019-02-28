@@ -157,6 +157,23 @@ public class CameraFragment extends Fragment {
         float f = Float.parseFloat(dimFloat);
         editor.putFloat("mPencilDim", f);
         editor.apply();
+        Log.e(TAG, "Saved <----" + dimFloat);
+        Log.e(TAG, "Saved <----");
+        int refWidth = prefs.getInt("refWidth", 0);
+        int refHeight = prefs.getInt("refHeight", 0);
+
+        Log.v(TAG, "-->> refWidth << " + Integer.toString(refWidth) );
+        Log.v(TAG, "-->> refHeight << " + Integer.toString(refHeight) );
+
+        Boolean enableCheck = prefs.getBoolean("eCheck", false);
+
+        if (enableCheck) {
+            Log.e(TAG, "Saved <---- true");
+        }else{
+            Log.e(TAG, "Saved <---- false");
+        }
+
+
     }
     /*========================  End 4 ======================== */
 
@@ -540,10 +557,8 @@ public class CameraFragment extends Fragment {
             }
             mMessage += "Visitanos en ";
             mMessage += getResources().getString( R.string.pref_link);
-        }
 
-        try {
-            if(inFile.exists() && m_iCameraState == 1){
+            try {
                 mFlashButton.setVisibility( View.GONE );
                 mPhotoButton.setVisibility( View.GONE );
                 mRefreshButton.setVisibility( View.VISIBLE );
@@ -560,10 +575,12 @@ public class CameraFragment extends Fragment {
                 } else {
                     Log.d(TAG, "null frame!");
                 }
+
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+                Log.e(TAG, "Error--- >");  //sending log output. .e : Send a Error Message
             }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            Log.e(TAG, "Error--- >");  //sending log output. .e : Send a Error Message
+
         }
         return rootView;
     }
@@ -1037,6 +1054,10 @@ public class CameraFragment extends Fragment {
     }
 
     private void updatePhotoButton() {
+
+        Log.v(TAG, ">> refWidth << " + Integer.toString(m_iRefWidth) );
+        Log.v(TAG, ">> refHeight << " + Integer.toString(m_iRefHeight) );
+
         // We still need this for the share intent
         mMessage = APP_SHARE_HASHTAG + "\n";
         //Save the Current Option selected
@@ -1088,6 +1109,8 @@ public class CameraFragment extends Fragment {
 
                 } else {
                     editor.putBoolean("eCheck", false);
+                    editor.putInt("refWidth", 0);
+                    editor.putInt("refHeight", 0);
                     mTextView.setVisibility(View.GONE);
                     mCameraUnitTextView.setVisibility(View.GONE);
                     mCameraHTextView.setVisibility(View.GONE);
@@ -1199,6 +1222,7 @@ public class CameraFragment extends Fragment {
                 mCameraPlainText.setVisibility(View.GONE);
                 editor.apply();
 
+                //Delete previous reference
                 File sdCard = Environment.getExternalStorageDirectory();
                 File dir = new File(sdCard.getAbsolutePath() + "/DCIM/E2IApp");
                 //Image processed

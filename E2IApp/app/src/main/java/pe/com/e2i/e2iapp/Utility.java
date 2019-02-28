@@ -1,9 +1,12 @@
 package pe.com.e2i.e2iapp;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.os.Environment;
 import android.preference.PreferenceManager;
+import android.support.v4.app.ActivityCompat;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -140,5 +143,17 @@ public class Utility {
         }
 
         return ret;
+    }
+
+    public static  Boolean isCameraAllow(Context context) {
+        Boolean val = ActivityCompat.checkSelfPermission(context, Manifest.permission.CAMERA) !=
+                PackageManager.PERMISSION_GRANTED;
+        return  val;
+    }
+
+    public static  Boolean isSDAllow(Context context) {
+        Boolean val = ActivityCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
+                PackageManager.PERMISSION_GRANTED;
+        return  val;
     }
 }

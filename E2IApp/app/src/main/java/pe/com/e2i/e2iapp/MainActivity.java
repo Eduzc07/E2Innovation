@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements MainFragment.Call
                 data += ";mm";
             else
                 data += ";in";
-        }else{
+        } else {
             data += ";0;0";
         }
 
