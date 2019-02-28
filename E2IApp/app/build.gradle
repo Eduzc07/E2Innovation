@@ -2,7 +2,9 @@ apply plugin: 'com.android.application'
 
 android {
     signingConfigs {
-        e2iKey {
+        e2iapp {
+            keyAlias 'e2iKey'
+            storeFile file('/home/edu/Local_G/2019/E2I_2019/e2iapp.jks')
             keyPassword 'e2i2019'
             storePassword '123654e2i2019'
         }
@@ -13,8 +15,8 @@ android {
         applicationId "pe.com.e2i.e2iapp"
         minSdkVersion 21
         targetSdkVersion 27
-        versionCode 1
-        versionName "1.0"
+        versionCode 10002
+        versionName "1.1"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
@@ -29,6 +31,7 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.e2iapp
         }
     }
     externalNativeBuild {
