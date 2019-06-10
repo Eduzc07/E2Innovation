@@ -598,13 +598,13 @@ public class CameraFragment extends Fragment {
             CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
             StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
-            for (int j =0; j<9;j++){
+            for (int j = 0; j < 9;j++){
                 Size currentSize = map.getOutputSizes(SurfaceTexture.class)[j];
                 Log.v(TAG, j + ": >> mPreviewSize << Height: "+ Integer.toString(currentSize.getHeight()));
                 Log.v(TAG, "   >> mPreviewSize << Width:"+ Integer.toString(currentSize.getWidth()));
             }
 
-            mPreviewSize = map.getOutputSizes(SurfaceTexture.class)[5];
+            mPreviewSize = map.getOutputSizes(SurfaceTexture.class)[0];
             //Sony Experia, it could change between devices.
             //0. 2160x3840
             //1. 1536x2048
@@ -850,7 +850,17 @@ public class CameraFragment extends Fragment {
 //                    Log.v(TAG, "   >> mPreviewSize << Width:"+ Integer.toString(currentSize.getWidth()));
 //                }
 
-                Size imageSize = map.getOutputSizes(SurfaceTexture.class)[5];
+                int len = map.getOutputSizes(SurfaceTexture.class).length;
+                int numLen = 0;
+                for (int i = 0; i < len;i++){
+                    Size imSize = map.getOutputSizes(SurfaceTexture.class)[i];
+                    if (imSize.getWidth() > 500 && imSize.getWidth() < 700) {
+                        numLen = i;
+                        break;
+                    }
+                }
+
+                Size imageSize = map.getOutputSizes(SurfaceTexture.class)[numLen];
                 //0. 2160x3840
                 //1. 1536x2048
                 //2. 1080x1920

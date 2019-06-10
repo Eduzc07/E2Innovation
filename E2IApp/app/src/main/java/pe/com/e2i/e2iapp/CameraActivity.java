@@ -67,7 +67,6 @@ public class CameraActivity extends AppCompatActivity {
 
                 ActivityCompat.requestPermissions(CameraActivity.this, new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQUEST_CAMERA_RESULT);
 
-
                 Log.v(LOG_TAG, "---->>1555 <<---- ");
                 return;
             } else {

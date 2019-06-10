@@ -165,8 +165,8 @@ Java_pe_com_e2i_e2iapp_CameraFragment_runMain(
         double time = (e2 - e1)/ getTickFrequency();
 
         char delay[20];
-        sprintf(delay, "Delay: %1.2f ms   ", time*1e3);
-        putText(mBgr, delay , Point(10, 30), CV_FONT_HERSHEY_PLAIN, 1, Scalar(255,0,0));
+        sprintf(delay, "Delay: %1.2f ms (%dx%d)", time*1e3, mBgr.cols, mBgr.rows);
+        putText(mBgr, delay , Point(10, 30), CV_FONT_HERSHEY_PLAIN, mBgr.rows/640.0, Scalar(255,0,0));
 
         numIter++;
         mBgr.copyTo(mRgb);
