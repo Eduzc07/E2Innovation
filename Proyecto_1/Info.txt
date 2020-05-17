@@ -1,0 +1,99 @@
+#Embebido Odroid UX4
+http://www.hardkernel.com/main/products/prdt_info.php?g_code=G143452239825
+
+#Camara con cable USB
+https://www.amazon.de/ELP-Objektiv-Kostenlose-Treiber-USB-Kamera-Modul/dp/B016G6LZ82/ref=sr_1_1?ie=UTF8&qid=1490816054&sr=8-1&keywords=elp+kamera+2.1
+
+http://www.elpcctv.com/full-hd-1080p-usb-cameras-c-85_88.html
+
+http://www.elpcctv.com/full-hd-usb-camera-module-1080p-usb20-ov2710-color-sensor-support-mjpeg-with-36mm-lens-p-203.html
+
+
+
+Embebido
+Camara con cable USB
+usb wifi
+bateria o calbe usb
+tarjeta SD 32 GB
+
+
+hostname -I
+check IP
+nmap -sn 192.168.1.0/24
+nmap -sn 10.42.0.0/24
+
+#Find ip address public
+curl ipinfo.io/ip
+ssh -X ubuntu@192.30.253.113
+netstat -nt
+
+#check number cpu core
+nproc
+lscpu
+
+echo $USER
+
+#Check kernel
+uname -a
+kernel
+https://blogs.s-osg.org/install-ubuntu-run-mainline-kernel-odroid-xu4/
+
+http://odroid.com/dokuwiki/doku.php?id=en:xu3_building_kernel
+
+http://odroid.com/dokuwiki/doku.php?id=en:xu4_wlan_ap
+
+https://github.com/hardkernel/linux/tree/odroidxu4-4.9.y
+
+
+update firmware:
+https://wireless.wiki.kernel.org/en/users/drivers/mediatek
+
+Ubuntu mate
+user:odroid
+pass:odroid
+
+Kali linux
+user:root
+pass:toor
+
+Ubuntu Lts
+user:root
+pass:odroid
+
+
+#Coy files to remote
+scp <source> <destination>
+scp /path/to/file username@a:/path/to/destination
+scp username@b:/path/to/file /path/to/destination
+https://unix.stackexchange.com/questions/106480/how-to-copy-files-from-one-machine-to-another-using-ssh
+
+#copy files
+mc
+
+
+#SSH
+ssh -keygen -t rsa  //Create a key
+
+
+##Wifi - WEP
+iwconfig
+ifconfig wlan0
+iwlist wlan0 scan
+sudo iwconfig wlan0 essid NETWORK_ID key WIRELESS_KEY
+sudo iwconfig wlan0 essid o2-WLAN87 key 3811933526389475
+
+
+##Wifi - WAP
+nmcli dev wifi
+nmcli dev wifi connect ESSID_NAME password ESSID_PASSWORD
+nmcli dev wifi connect o2-WLAN87 password 3811933526389475
+https://askubuntu.com/questions/16584/how-to-connect-and-disconnect-to-a-network-manually-in-terminal
+
+
+#Operation system
+http://odroid.in/ubuntu_16.04lts/
+
+#WIfi
+https://askubuntu.com/questions/457061/ralink-mt7601u-148f7601-wi-fi-adapter-installation/554278#554278
+
+#VNC server

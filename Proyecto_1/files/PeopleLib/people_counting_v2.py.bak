@@ -1,0 +1,404 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*
+'''
+People counting
+====================
+
+Keys
+----
+ESC - exit
+ s  - Save Image
+'''
+
+# Python 2/3 compatibility
+from __future__ import print_function
+
+import numpy as np
+import cv2
+import video
+import datetime
+from common import anorm2, draw_str
+from time import clock
+
+pin=np.array([[0.0,240.0],[300.0,240.0],[640.0,240.0]]) #Definiendo posicion y tamano del area de entrada
+pout=np.array([[0.0,140.0],[150.0,140.0],[640.0,140.0]]) #Definiendo posicion y tamano del area de salida
+#EraseW
+pol = np.array([[0.0,0.0],[0.0,50.0],[640.0,50.0],[640,0] ], np.int32)
+dposx=10
+
+
+# pin=np.array([[400.0,360.0],[500.0,50.0],[640.0,50.0]])
+# pout=np.array([[0.0,360.0],[290.0,360.0],[300.0,0.0]])
+# #EraseW
+# pol = np.array([[0,0], [0,260], [394,220],[410,0] ], np.int32)
+# dposx=10
+
+# pin=np.array([[0.0,360.0],[360.0,174.0],[640.0,400.0]])
+# pout=np.array([[0.0,160.0],[390.0,90.0],[400.0,0.0]])
+# #Erase
+# pol = np.array([[400,0], [380,194], [640,400],[640,0] ], np.int32)
+# dposx=420
+
+
+cv2.namedWindow("Counting People"); #Crea la Ventana Counting People
+cv2.moveWindow("Counting People", 1425,20); #Mueve Counting People a la posicion deseada en la pantalla
+
+cv2.namedWindow("win1");#Crea la Ventana win1
+cv2.moveWindow("win1", 1425,490);#Mueve win1 a la posicion deseada en la pantalla
+
+cv2.namedWindow("win2");#Crea la Ventana win2
+cv2.moveWindow("win2", 700,20);#Mueve win2 a la posicion deseada en la pantalla
+
+cv2.namedWindow("win3");#Crea la Ventana win3
+cv2.moveWindow("win3", 0,20);#Mueve win3 a la posicion deseada en la pantalla
+
+winName = "Movement Indicator"
+cv2.namedWindow(winName);#Crea la Ventana Movement Indicator
+cv2.moveWindow(winName, 2065,490);#Mueve Movement Indicator a la posicion deseada en la pantalla
+
+def eq(valx):
+    if(valx<pin[1,0]):#Evaluando en que tramo se encuentra 
+        mi1=(pin[1,1]-pin[0,1])/(pin[1,0]-pin[0,0])#Hallando la pendiente 
+        valiy=mi1*(valx-pin[0,0])+pin[0,1]#Ecuacion de la recta uno de ingreso
+
+    if(valx>=pin[1,0]):#Evaluando en que tramo se encuentra 
+        mi2=(pin[2,1]-pin[1,1])/(pin[2,0]-pin[1,0])#Hallando la pendiente 
+        valiy=mi2*(valx-pin[1,0])+pin[1,1]#Ecuacion de la recta dos de ingreso
+
+    if (valx<400):     #Si se encuentra en el area de salida 
+        if(valx<pout[1,0]): #Evaluando en que tramo se encuentra 
+            mo1=(pout[1,1]-pout[0,1])/(pout[1,0]-pout[0,0]) #Hallando la pendiente 
+            valoy=mo1*(valx-pout[0,0])+pout[0,1] #Ecuacion de la recta uno de salida
+
+        if(valx>=pout[1,0]): #Evaluando en que tramo se encuentra 
+            mo2=(pout[2,1]-pout[1,1])/(pout[2,0]-pout[1,0]) #Hallando la pendiente
+            valoy=mo2*(valx-pout[1,0])+pout[1,1] #Ecuacion de la recta dos de salida
+    else:
+        valoy=0
+    return valiy,valoy    
+
+
+def diffImg(t0, t1, t2): #Restar dos cuadros continuos para detectar el movimiento   
+    d1 = cv2.absdiff(t2, t1) #Diferencia entre cuadro t2(Tiempo2)-t1(Tiempo1)
+    d2 = cv2.absdiff(t1, t0)#Diferencia entre cuadro t1(Tiempo1)-t0(Tiempo0)
+    diff=cv2.bitwise_or(d1, d2) #Diferencia de los dos conjuntos de cuadros
+    return diff
+
+def checkMov(pi,pf): #Pi primer punto, Po punto final
+    iviy,ivoy=eq(pi[0])
+    # print("values yi:")
+    # print(pi[1],iviy)
+    # print(pi[1],ivoy)
+    fviy,fvoy=eq(pf[0])
+    # print("values yf:")
+    # print(pf[1],fviy)
+    # print(pf[1],fvoy)
+
+    mov=0
+    if(pi[1] < ivoy and pf[1] > fviy): #Saber si el objeto se encuentra dentro del area de entrada
+        mov=1
+    
+    if(pi[1] > iviy and pf[1] < fvoy): #Saber si el objeto se encuentra dentro del area de salida
+        mov=2
+    
+
+    return mov
+
+
+class App: #Creacion de la clase App
+    def __init__(self, video_src): #Inicializacion de clase con conjunto de variables video_src
+        self.track_len = 10
+        self.detect_interval = 5
+        self.tracks = []
+        self.cam = video.create_capture(video_src)
+        self.frame_idx = 0
+
+    def run(self): #Corremos la clase
+        
+        cv2.namedWindow(winName, cv2.WINDOW_AUTOSIZE)     # Ajusta la ventana para cuadrar con las imagenes mostradas
+
+        # cap = cv2.VideoCapture('test1.mp4')
+        # cap = cv2.VideoCapture('IMG_5346.MOV')
+        # cap = cv2.VideoCapture('IMG_5741.MOV')
+        cap = cv2.VideoCapture('../Videos/IMG_6051.MOV')
+
+        # Read three images first:
+        ret, camv = cap.read()
+        height,width,d=camv.shape
+        # height,width=[height/4,width/4]
+        height,width=[height/3,width/3]
+
+        #=======================================================================
+        #save
+        # Define the codec and create VideoWriter object
+        fourcc = cv2.VideoWriter_fourcc(*'XVID') #fourcc se usa para especificar el tipo de video (XVID da videos pequenos)
+        out = cv2.VideoWriter('../Videos/output.avi',fourcc, 35.0, (width,height)) #Reproduce el video con VideoWriter
+        #=======================================================================
+        
+        framev=cv2.resize(camv, (width,height), fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA) #Escala la imagen (camv) a 25% en ambos ejes
+
+        t_minus = cv2.cvtColor(framev, cv2.COLOR_RGB2GRAY) #Cambia el color a escala de grises (cuadro anterior)
+        t = cv2.cvtColor(framev, cv2.COLOR_RGB2GRAY)#Cambia el color a escala de grises (cuadro presente)
+        t_plus = cv2.cvtColor(framev, cv2.COLOR_RGB2GRAY)#Cambia el color a escala de grises (cuadro posterior)
+
+        blank_image = np.zeros((height,width,3), np.uint8) #Imagen no definida en color negro
+
+        color=0
+        puntos=[]
+        puntos2=[]
+        count=0
+        nframes=0
+
+        pup=0
+        pdown=0
+        op=0
+        fps=0
+        e0 = cv2.getTickCount()#Calcula el numero de Ticks hasta el momento 
+        
+        
+        while True:
+            e1 = cv2.getTickCount() #Calcula el numero de Ticks hasta el momento 
+            # ret, frame = self.cam.read()
+            ret, camf = cap.read()
+            frame=cv2.resize(camf, (width,height), fx=0.25, fy=0.25, interpolation=cv2.INTER_AREA) #Reescalamiento de imagen
+
+            #Erase window
+            # cv2.fillPoly(frame,[pol],1)
+
+            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) #Cambiando imagen a escala de grises 
+            vis = frame.copy()#Copiamos el frame reescalado
+
+            im=diffImg(t_minus, t, t_plus) #Diferencia entre los tres cuadros definidos antes
+            
+            blur = cv2.blur(im,(9,9)) #Filtrado de imagen
+
+
+            kernel = np.ones((21,21),np.uint8) #Se pocisiona el negro como color dominante en la imagen
+                        
+
+            ret,thresh = cv2.threshold(im,50,255,cv2.THRESH_BINARY) ##<------------------------- Set best value
+            opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel) #Erosion+Dilatacion para remover ruido de imagen
+            # erosion = cv2.erode(thresh,kernel,iterations = 1)
+            # dilation = cv2.dilate(thresh,kernel,iterations = 1)
+            closing = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel) #Dilatacion+Erosion cerrar huecos en la imagen
+            cv2.imshow("win2",opening)#Aplicamos opening en win2
+            
+            cv2.imshow("win1",closing)#Aplicamos closing en win1
+
+            # img2_fg = cv2.cvtColor(closing,cv2.COLOR_GRAY2RGB)
+            # vis = cv2.add(vis,img2_fg)
+            # cv2.imshow("win3",vis)
+
+            
+            im2, contours, hierarchy = cv2.findContours(closing, cv2.RETR_CCOMP , cv2.CHAIN_APPROX_NONE)#CHAIN_APPROX_NONE,CHAIN_APPROX_SIMPLE ,CHAIN_APPROX_TC89_L1
+            cv2.drawContours(vis, contours, -1, (0,255,0), -1) #Dibuja todos los contornos de la imagen
+
+            # th3 = cv2.adaptiveThreshold(im,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY_INV,11,2)
+            
+            # cv2.imshow("aaaa",im)
+
+            # cv2.line(vis,(640,80),(0,360),(0,255,255),4)
+            
+            cv2.polylines(vis, [np.int32(pin)], False, (0, 255, 0),2) #Dibuja los limites del area de ingreso
+            ppin=np.array([[0,480],pin[0],pin[1],pin[2],[640,480]],np.int) #Define los contornos del area de ingreso
+
+            overlay = np.zeros((height,width,3), np.uint8)
+            cv2.fillPoly(overlay,[ppin],(0,255,0)) #Colorea el area de ingreso (0,255,0) color verde bgr
+
+            cv2.polylines(vis, [np.int32(pout)], False, (0, 0, 255),2)#Dibuja los limites del area de salida
+            ppout=np.array([[0,0],pout[0],pout[1],pout[2],[640,0]],np.int)#Define los contornos del area de salida
+            cv2.fillPoly(overlay,[ppout],(0,0,255))#Colorea el area de salida(0,0,255) color rojo bgr
+
+
+
+            # # Now black-out the area of logo in ROI
+            # img1_bg = cv2.bitwise_and(roi,roi,mask = mask_inv)
+            # # Take only region of logo from logo image.
+            # img2_fg = cv2.bitwise_and(img2,img2,mask = mask)
+            # # Put logo in ROI and modify the main image
+            # vis = cv2.add(vis,mask_inv)
+
+
+
+
+            vis = cv2.addWeighted(vis, 0.9, overlay, 0.1, 0.0, dtype=cv2.CV_8UC3)  #Calcula la suma de vis+overlay y la coloca como nuevo vis
+
+            aream=0 #Area Previa
+            ni=0 #Numero de Iteraciones
+            xp,yp,wp,hp= 0,0,0,0  #cordenadas Previas
+
+            for cnt in contours:
+                area = cv2.contourArea(cnt)   #El contorno del area (area actual)                
+                # print (area)
+                if (area>8000): ##<------------------------- Set best value
+
+                    M = cv2.moments(cnt) #moments da una lista de valores calculados de todos los momentos (Ejmp: Centro, masa o area del
+                    cx = int(M['m10']/M['m00'])#Calcula el centroide en X del objeto
+                    cy = int(M['m01']/M['m00'])#Calcula el centroide en Y del objeto 
+
+                    x,y,w,h = cv2.boundingRect(cnt) #Se crea un rectangulo delimitador, x,y:coordenadas superior e izquierda - w,h:ancho y altura del rectangulo.
+
+                    # if (ni==0):
+                    #     cv2.rectangle(vis,(x,y),(x+w,y+h),(255,255,0),3)
+                    # elif(ni==1) and (x<xp or x>xp+hp):
+                    #     cv2.rectangle(vis,(x,y),(x+w,y+h),(255,0,255),3)
+                    # elif(ni==2):
+                    #     cv2.rectangle(vis,(x,y),(x+w,y+h),(0,255,0),2)
+                    
+
+                    cv2.putText(vis,'%0.2f - %d'  %(area,ni), (cx,cy-10), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255,255,255),1)#Muestra el area del rectangulo (con dos decimales)-valor ni en el centroide del rectangulo, desplazado en Y-10
+
+                    
+                    color+=2
+                    if (area>aream and ni==0): #Si area actual es menor al area previa
+                        cv2.rectangle(vis,(x,y),(x+w,y+h),(255,255,0),3) #Se crea el rectangulo con las condiciones dadas
+                        puntos.append([cx, cy]) #anexa los puntos de seguimiento en el centroide del rectangulo
+                        cv2.circle(vis, (cx, cy), 5, (0,0,255), -1) #Dibuja un circulo de color Rojo
+                        if color <255:
+                            cv2.circle(blank_image, (cx, cy), 5, (0,255-color,255), -1) #Dibuja circulos que degradaran de rojo a amarillo.
+                        else:
+                            cv2.circle(blank_image, (cx, cy), 5, (0,color-510,510-color), -1)
+
+
+                    if (area>aream and ni==1) and (y<140 or y>260): # and h<hp and w<wp
+                        cv2.rectangle(vis,(x,y),(x+w,y+h),(255,0,255),3) #Se crea el rectangulo con las condiciones dadas
+                        puntos2.append([cx, cy]) #anexa los puntos2 de seguimiento en el centroide del rectangulo
+                        cv2.circle(vis, (cx, cy), 5, (255,0,0), -1) #Dibuja un circulo de color Azul
+                        cv2.circle(blank_image, (cx, cy), 5, (255-color,0,0), -1) #Dibuja circulos que degradaran en tonos de azul    
+
+                    xp,yp,wp,hp= x,y,w,h #Convierta las coordenadas previas en las actuales
+                    aream=area     #Convierte el area previa en la actual
+                    count=0 #reinicia el conteo
+                    # break
+                    ni=+1 #aumenta el numero de iteracion en 1
+
+
+
+            count+=1   #aumenta el conteo 
+
+            if(len(puntos)>0):#Si longitud de puntos mayor que cero
+                npuntos=np.int32(puntos)#Velocidad de integracion de puntos
+                pi=(npuntos[0,0],npuntos[0,1])#Posicion punto inicial 
+                pf=(npuntos[len(npuntos)-1,0],npuntos[len(npuntos)-1,1])#Pocision punto Final
+                cv2.circle(vis, pi, 8, (0,0,255), -1)#Crea un circulo color rojo en el punto inicial
+                # cv2.polylines(vis, [npuntos], False, (255, 255, 255),1)
+                cv2.polylines(blank_image, [npuntos], False, (255, 255, 255),1)#Traza una linea color blanco en blank_image
+                cv2.circle(vis, pf, 8, (0,255,0), -1)#Crea un circulo color Verde en el punto final 
+                cv2.line(vis,pi,pf,(0,255,255),4)#Crea una linea color Aqua del pi al pf
+
+            if(len(puntos2)>0):#Si longitud de puntos2 mayor que cero
+                npuntos=np.int32(puntos2)#Velocidad de integracion de puntos2
+                pi=(npuntos[0,0],npuntos[0,1])
+                pf=(npuntos[len(npuntos)-1,0],npuntos[len(npuntos)-1,1])
+                cv2.circle(vis, pi, 8, (255,0,0), -1)
+                # cv2.polylines(vis, [npuntos], False, (255, 255, 255),1)
+                # cv2.polylines(blank_image, [npuntos], False, (255, 255, 255),1)                
+                cv2.circle(vis, pf, 8, (0,255,0), -1)
+                cv2.line(vis,pi,pf,(0,255,255),4)#Crea una linea color Aqua del pi al pf
+
+
+                
+            
+            vis = cv2.addWeighted(vis, 0.9, blank_image, 0.6, 0.0, dtype=cv2.CV_8UC3)#Crea una nueva imagen vis a partir de vis anterior + blank_image
+
+
+            #Read next image
+            nframes+=1
+            #demorar 10 frames para percibir movimientos lentos
+            if nframes>1:
+                nframes=0
+                t_minus = t
+                t = t_plus
+                gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+                t_plus = cv2.equalizeHist(gray)
+            draw_str(vis, (20, 20), 'counts: %d' % count)
+
+
+            cv2.putText(vis,"#Subieron: %d" % pup, (dposx,60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255),1)
+            cv2.putText(vis,"#Bajaron: %d" % pdown, (dposx,90), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255),1)
+            cv2.putText(vis,"#Total: %d" % (pup-pdown), (dposx,120), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255),1)
+            cv2.putText(vis,'Fecha: %s' % datetime.datetime.now(), (dposx,150), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255,255,255),1)
+
+            # cv2.putText(vis,"#Subieron: %d" % pup, (dposx,45), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255),2) #En la ventana PeopleCounting incluye el texto definiendo posicion, tipo de letra y tamano
+            # cv2.putText(vis,"#Bajaron: %d" % pdown, (130,45), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255),2)#En la ventana PeopleCounting incluye el texto definiendo posicion, tipo de letra y tamano
+            # cv2.putText(vis,"#Total: %d" % (pup-pdown), (270,45), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255),2)#En la ventana PeopleCounting incluye el texto definiendo posicion, tipo de letra y tamano
+            # cv2.putText(vis,'Fecha: %s' % datetime.datetime.now().strftime("%y-%m-%d  %H:%M:%S"), (400,45), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255),2)#En la ventana PeopleCounting muestra la fecha del ordenador definiendo posicion, tipo de letra y tamano 
+            # cv2.putText(vis,"E2 Innovation SRL - Conteo de Pasajeros", (160,20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255),2)
+
+            if(count>10): ##<------------------------- Set best value
+                if(len(puntos)>0):
+                    npuntos=np.int32(puntos)    
+                    pi=(npuntos[0,0],npuntos[0,1])#Definiendo el punto inicial del vector de seguimiento
+                    pf=(npuntos[len(npuntos)-1,0],npuntos[len(npuntos)-1,1])#Definiendo el punto final del vector de seguimiento
+                    val=checkMov(pi,pf) #Punto Inicial Punto final entran al checkmov
+                    if val==1:
+                        print('Una persona subio (%s)' % datetime.datetime.now())
+                        pup+=1#Aumenta el contador de pasajeros que ingresan
+                        cv2.imwrite('../Images/image%d.png'%op,vis)#Realizar screenshot de la ventana 
+                        print("Image Saved!")#notificacion 
+                        op+=1
+                    elif val==2:
+                        print('Una persona bajo (%s)' % datetime.datetime.now())
+                        pdown+=1#Aumenta el contador de pasajeros que egresan
+                        cv2.imwrite('../Images/image%d.png'%op,vis)#Realizar screenshot de la ventana 
+                        print("Image Saved!")#notificacion 
+                        op+=1
+
+                #Reinico de valores
+                blank_image = np.zeros((height,width,3), np.uint8) 
+                puntos=[]
+                puntos2=[]
+                count=0
+                color=0
+
+
+
+            cv2.imshow(winName, blank_image) #Muestra la ventana con blank_image (Background estatico:color negro, Imagenes Dinamicas:color blanco)
+            # cv2.imshow("winName", thresh)
+            
+
+            e2 = cv2.getTickCount()
+            time = (e2 - e1)/cv2.getTickFrequency() #Calculamos el delay entre la reproduccion del video y el procesamiento en si 
+            cv2.putText(vis,"delay: %0.3f ms" % (time*1000), (dposx,180), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255,255,255),1) #Se muestra el delay
+
+            #=======================================================================
+            # FPS
+            # e3 = cv2.getTickCount()
+            # time = (e3 - e0)/cv2.getTickFrequency()
+            # fps+=1
+
+            # if(time>1.0):
+            #     e0 = cv2.getTickCount()
+            #     print(fps)
+            #     fps=0
+            #=======================================================================
+
+            #=======================================================================
+            # write the flipped frame
+            # out.write(vis)
+            #=======================================================================
+            cv2.imshow('Counting People', vis) #Mostramos la sucesion de imagenes vis en la ventana CountingPeople
+
+
+            ch = 0xFF & cv2.waitKey(1) #Comando para terminar programa
+            if ch == 27:
+                break
+            elif ch == ord('s'): # wait for 's' key to save and exit
+                cv2.imwrite('image%d.png'%op,vis)#Guardar imagen 
+                print("Image Saved!")#Notificacion de guardado
+                op+=1
+
+def main(): #App VideoSource
+    import sys
+    try:
+        video_src = sys.argv[1]
+    except:
+        video_src = 0
+
+    print(__doc__)
+    App(video_src).run()
+    cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    main()
+
